@@ -1,0 +1,45 @@
+{
+  "id": "new_york",
+  "name": "New York City",
+  "country": "United States",
+  "flag": "🇺🇸",
+  "center_lat": 40.7128,
+  "center_lng": -74.006,
+  "default_zoom": 11,
+  "bounds": {
+    "min_lat": 40.48,
+    "max_lat": 40.92,
+    "min_lng": -74.28,
+    "max_lng": -73.70
+  },
+  "climate_zone": "Humid continental",
+  "population_current": 8336817,
+  "gdp_per_capita": 85000,
+  "urban_growth_rate": 0.004,
+  "key_planning_challenge": "Island geography forcing vertical infill and flood resilience",
+  "expansion_constraint": "Limited land area, sea-level rise risk, aging infrastructure",
+  "historical_snapshots": [
+    {"year": 1950, "population": 7891957, "area_km2": 783, "key_event": "Post-war suburban expansion begins"},
+    {"year": 1970, "population": 7894862, "area_km2": 783, "key_event": "Urban fiscal crisis"},
+    {"year": 1990, "population": 7322564, "area_km2": 783, "key_event": "Population recovery begins"},
+    {"year": 2010, "population": 8175133, "area_km2": 783, "key_event": "Bloomberg era density push"},
+    {"year": 2024, "population": 8336817, "area_km2": 783, "key_event": "Climate resilience investments"}
+  ],
+  "initial_metrics": {
+    "population": 8336817,
+    "gdp_per_capita": 85000,
+    "commute_minutes": 45,
+    "aqi": 65,
+    "green_ratio": 0.17,
+    "equity_score": 0.52,
+    "transit_coverage": 0.78,
+    "flood_risk": 0.35,
+    "infrastructure_score": 0.75,
+    "hospital_beds_per_1k": 4.2,
+    "school_enrollment": 0.91,
+    "employment_rate": 0.88,
+    "housing_affordability": 0.28,
+    "energy_per_capita": 6800,
+    "co2_per_capita": 4.7
+  }
+}

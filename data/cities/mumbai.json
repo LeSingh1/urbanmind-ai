@@ -1,0 +1,45 @@
+{
+  "id": "mumbai",
+  "name": "Mumbai",
+  "country": "India",
+  "flag": "🇮🇳",
+  "center_lat": 19.0760,
+  "center_lng": 72.8777,
+  "default_zoom": 11,
+  "bounds": {
+    "min_lat": 18.90,
+    "max_lat": 19.28,
+    "min_lng": 72.74,
+    "max_lng": 73.05
+  },
+  "climate_zone": "Tropical wet and dry",
+  "population_current": 20667656,
+  "gdp_per_capita": 8500,
+  "urban_growth_rate": 0.018,
+  "key_planning_challenge": "Coastal flooding, extreme densification, and slum upgrading",
+  "expansion_constraint": "Coastal regulation zones, Dharavi redevelopment complexity, monsoon flooding",
+  "historical_snapshots": [
+    {"year": 1950, "population": 2839270, "area_km2": 603, "key_event": "Industrial port city"},
+    {"year": 1970, "population": 5970575, "area_km2": 603, "key_event": "Textile mill closures begin"},
+    {"year": 1990, "population": 9925891, "area_km2": 603, "key_event": "IT services growth"},
+    {"year": 2010, "population": 12442373, "area_km2": 603, "key_event": "Eastern waterfront project"},
+    {"year": 2024, "population": 20667656, "area_km2": 603, "key_event": "Dharavi redevelopment plan"}
+  ],
+  "initial_metrics": {
+    "population": 20667656,
+    "gdp_per_capita": 8500,
+    "commute_minutes": 68,
+    "aqi": 155,
+    "green_ratio": 0.07,
+    "equity_score": 0.32,
+    "transit_coverage": 0.58,
+    "flood_risk": 0.55,
+    "infrastructure_score": 0.45,
+    "hospital_beds_per_1k": 0.6,
+    "school_enrollment": 0.78,
+    "employment_rate": 0.69,
+    "housing_affordability": 0.62,
+    "energy_per_capita": 2800,
+    "co2_per_capita": 1.4
+  }
+}

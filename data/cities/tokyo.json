@@ -1,0 +1,45 @@
+{
+  "id": "tokyo",
+  "name": "Tokyo",
+  "country": "Japan",
+  "flag": "🇯🇵",
+  "center_lat": 35.6762,
+  "center_lng": 139.6503,
+  "default_zoom": 11,
+  "bounds": {
+    "min_lat": 35.52,
+    "max_lat": 35.82,
+    "min_lng": 139.45,
+    "max_lng": 139.93
+  },
+  "climate_zone": "Humid subtropical",
+  "population_current": 13960000,
+  "gdp_per_capita": 52000,
+  "urban_growth_rate": -0.002,
+  "key_planning_challenge": "Earthquake resilience and aging/declining population",
+  "expansion_constraint": "Seismic zones, aging population, strict zoning regulations",
+  "historical_snapshots": [
+    {"year": 1950, "population": 5385000, "area_km2": 2194, "key_event": "Post-war reconstruction"},
+    {"year": 1970, "population": 11408000, "area_km2": 2194, "key_event": "Economic miracle peak"},
+    {"year": 1990, "population": 11856000, "area_km2": 2194, "key_event": "Bubble economy collapse"},
+    {"year": 2010, "population": 13159000, "area_km2": 2194, "key_event": "Mega-region integration"},
+    {"year": 2024, "population": 13960000, "area_km2": 2194, "key_event": "Population decline begins"}
+  ],
+  "initial_metrics": {
+    "population": 13960000,
+    "gdp_per_capita": 52000,
+    "commute_minutes": 48,
+    "aqi": 42,
+    "green_ratio": 0.12,
+    "equity_score": 0.71,
+    "transit_coverage": 0.92,
+    "flood_risk": 0.28,
+    "infrastructure_score": 0.92,
+    "hospital_beds_per_1k": 13.1,
+    "school_enrollment": 0.99,
+    "employment_rate": 0.97,
+    "housing_affordability": 0.35,
+    "energy_per_capita": 7200,
+    "co2_per_capita": 3.8
+  }
+}

@@ -1,0 +1,47 @@
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+*.pyc
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/node_modules/
+
+# Models
+models/
+*.pt
+*.pth
+*.pkl
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# Data (keep city JSON, ignore large datasets)
+data/osm_cache/
+data/rasters/
+data/pop_grids/
