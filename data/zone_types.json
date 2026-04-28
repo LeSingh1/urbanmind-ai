@@ -1,0 +1,24 @@
+{
+  "zones": [
+    {"id": "RES_LOW", "name": "Low-Density Residential", "category": "residential", "color": "#F5CBA7", "min_sps": 4.0, "description": "Single-family homes, duplexes, townhouses"},
+    {"id": "RES_MED", "name": "Medium-Density Residential", "category": "residential", "color": "#E59866", "min_sps": 5.5, "description": "Walk-up apartments 4–12 floors"},
+    {"id": "RES_HIGH", "name": "High-Density Residential", "category": "residential", "color": "#CA6F1E", "min_sps": 7.5, "description": "High-rise towers 12–50 floors, transit within 400m"},
+    {"id": "COM_RETAIL", "name": "Retail Commercial", "category": "commercial", "color": "#2E86C1", "min_sps": 4.5, "description": "Shops, restaurants, neighborhood retail"},
+    {"id": "COM_OFFICE", "name": "Office Commercial", "category": "commercial", "color": "#1A5276", "min_sps": 6.5, "description": "Office towers, business parks, CBD"},
+    {"id": "IND_LIGHT", "name": "Light Industrial", "category": "industrial", "color": "#A9CCE3", "min_sps": 4.0, "description": "Manufacturing, warehouses, tech parks"},
+    {"id": "IND_HEAVY", "name": "Heavy Industrial", "category": "industrial", "color": "#5D6D7E", "min_sps": 7.0, "description": "Refineries, heavy manufacturing — 1km buffer"},
+    {"id": "MIX_USE", "name": "Mixed Use", "category": "mixed", "color": "#A9DFBF", "min_sps": 5.0, "description": "Ground floor retail, upper floors residential or office"},
+    {"id": "GREEN_PARK", "name": "Public Park", "category": "green", "color": "#27AE60", "min_sps": 2.0, "description": "Parks, plazas, recreational green space"},
+    {"id": "GREEN_FOREST", "name": "Protected Forest", "category": "green", "color": "#1E8449", "min_sps": 1.0, "description": "Ecological forest — permanent, cannot be converted"},
+    {"id": "HEALTH_CLINIC", "name": "Health Clinic", "category": "health", "color": "#E74C3C", "min_sps": 3.5, "description": "Primary care clinic, urgent care"},
+    {"id": "HEALTH_HOSP", "name": "Hospital", "category": "health", "color": "#CB4335", "min_sps": 6.0, "description": "Full-service hospital — arterial road + backup power"},
+    {"id": "EDU_SCHOOL", "name": "School", "category": "education", "color": "#F9E79F", "min_sps": 3.5, "description": "K-12 school, within residential neighborhoods"},
+    {"id": "EDU_UNIVERSITY", "name": "University", "category": "education", "color": "#F4D03F", "min_sps": 5.5, "description": "University campus, research institutions"},
+    {"id": "INFRA_POWER", "name": "Power Substation", "category": "infrastructure", "color": "#7D6608", "min_sps": 3.0, "description": "Electrical grid infrastructure"},
+    {"id": "INFRA_WATER", "name": "Water Treatment", "category": "infrastructure", "color": "#148F77", "min_sps": 3.0, "description": "Water treatment and distribution"},
+    {"id": "TRANS_HUB", "name": "Transit Hub", "category": "transport", "color": "#8E44AD", "min_sps": 5.0, "description": "Subway station, bus terminal, multimodal hub"},
+    {"id": "TRANS_HIGHWAY", "name": "Highway", "category": "transport", "color": "#6C3483", "min_sps": 3.0, "description": "Major highway/motorway infrastructure"},
+    {"id": "SAFETY_FIRE", "name": "Fire Station", "category": "safety", "color": "#E74C3C", "min_sps": 3.0, "description": "Fire and emergency services"},
+    {"id": "SAFETY_POLICE", "name": "Police Station", "category": "safety", "color": "#1F618D", "min_sps": 3.0, "description": "Police station and emergency response"}
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "id": "singapore",
+  "name": "Singapore",
+  "country": "Singapore",
+  "flag": "🇸🇬",
+  "center_lat": 1.3521,
+  "center_lng": 103.8198,
+  "default_zoom": 12,
+  "bounds": {
+    "min_lat": 1.15,
+    "max_lat": 1.48,
+    "min_lng": 103.60,
+    "max_lng": 104.08
+  },
+  "climate_zone": "Tropical rainforest",
+  "population_current": 5917600,
+  "gdp_per_capita": 65000,
+  "urban_growth_rate": 0.008,
+  "key_planning_challenge": "Finite land area requiring maximum vertical efficiency and smart energy",
+  "expansion_constraint": "Island geography, water security, land scarcity",
+  "historical_snapshots": [
+    {"year": 1950, "population": 1022000, "area_km2": 581, "key_event": "British colonial port"},
+    {"year": 1970, "population": 2074507, "area_km2": 581, "key_event": "HDB public housing program"},
+    {"year": 1990, "population": 3047100, "area_km2": 646, "key_event": "Changi Airport expansion"},
+    {"year": 2010, "population": 5076700, "area_km2": 710, "key_event": "Marina Bay Sands opening"},
+    {"year": 2024, "population": 5917600, "area_km2": 735, "key_event": "Long Island reclamation plans"}
+  ],
+  "initial_metrics": {
+    "population": 5917600,
+    "gdp_per_capita": 65000,
+    "commute_minutes": 38,
+    "aqi": 48,
+    "green_ratio": 0.32,
+    "equity_score": 0.72,
+    "transit_coverage": 0.88,
+    "flood_risk": 0.25,
+    "infrastructure_score": 0.96,
+    "hospital_beds_per_1k": 2.4,
+    "school_enrollment": 0.99,
+    "employment_rate": 0.96,
+    "housing_affordability": 0.38,
+    "energy_per_capita": 9100,
+    "co2_per_capita": 8.1
+  }
+}

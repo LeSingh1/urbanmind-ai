@@ -1,0 +1,45 @@
+{
+  "id": "lagos",
+  "name": "Lagos",
+  "country": "Nigeria",
+  "flag": "🇳🇬",
+  "center_lat": 6.5244,
+  "center_lng": 3.3792,
+  "default_zoom": 11,
+  "bounds": {
+    "min_lat": 6.35,
+    "max_lat": 6.70,
+    "min_lng": 3.10,
+    "max_lng": 3.70
+  },
+  "climate_zone": "Tropical wet",
+  "population_current": 15946000,
+  "gdp_per_capita": 4200,
+  "urban_growth_rate": 0.058,
+  "key_planning_challenge": "Fastest-growing megacity with informal settlements and coastal flooding",
+  "expansion_constraint": "Coastal flooding, lagoon geography, infrastructure deficit",
+  "historical_snapshots": [
+    {"year": 1950, "population": 325000, "area_km2": 1171, "key_event": "Colonial port expansion"},
+    {"year": 1970, "population": 1440000, "area_km2": 1171, "key_event": "Oil boom migration"},
+    {"year": 1990, "population": 4800000, "area_km2": 1171, "key_event": "Structural adjustment fallout"},
+    {"year": 2010, "population": 10578000, "area_km2": 1171, "key_event": "Informal city growth"},
+    {"year": 2024, "population": 15946000, "area_km2": 1171, "key_event": "Eko Atlantic sea wall project"}
+  ],
+  "initial_metrics": {
+    "population": 15946000,
+    "gdp_per_capita": 4200,
+    "commute_minutes": 75,
+    "aqi": 145,
+    "green_ratio": 0.04,
+    "equity_score": 0.29,
+    "transit_coverage": 0.18,
+    "flood_risk": 0.62,
+    "infrastructure_score": 0.28,
+    "hospital_beds_per_1k": 0.4,
+    "school_enrollment": 0.72,
+    "employment_rate": 0.61,
+    "housing_affordability": 0.55,
+    "energy_per_capita": 1800,
+    "co2_per_capita": 0.8
+  }
+}

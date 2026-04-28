@@ -1,0 +1,45 @@
+{
+  "id": "sao_paulo",
+  "name": "São Paulo",
+  "country": "Brazil",
+  "flag": "🇧🇷",
+  "center_lat": -23.5505,
+  "center_lng": -46.6333,
+  "default_zoom": 11,
+  "bounds": {
+    "min_lat": -23.80,
+    "max_lat": -23.36,
+    "min_lng": -46.93,
+    "max_lng": -46.37
+  },
+  "climate_zone": "Humid subtropical",
+  "population_current": 12325232,
+  "gdp_per_capita": 18000,
+  "urban_growth_rate": 0.012,
+  "key_planning_challenge": "Extreme inequality, favela integration, and hillside development limits",
+  "expansion_constraint": "Mananciais water protection areas, hillside slopes, social inequality",
+  "historical_snapshots": [
+    {"year": 1950, "population": 2622786, "area_km2": 1521, "key_event": "Industrial migration boom"},
+    {"year": 1970, "population": 5924615, "area_km2": 1521, "key_event": "Military era urbanization"},
+    {"year": 1990, "population": 9627932, "area_km2": 1521, "key_event": "Favela consolidation"},
+    {"year": 2010, "population": 11253503, "area_km2": 1521, "key_event": "Maracanã investment era"},
+    {"year": 2024, "population": 12325232, "area_km2": 1521, "key_event": "Smart city corridor initiatives"}
+  ],
+  "initial_metrics": {
+    "population": 12325232,
+    "gdp_per_capita": 18000,
+    "commute_minutes": 62,
+    "aqi": 110,
+    "green_ratio": 0.11,
+    "equity_score": 0.31,
+    "transit_coverage": 0.52,
+    "flood_risk": 0.40,
+    "infrastructure_score": 0.55,
+    "hospital_beds_per_1k": 2.1,
+    "school_enrollment": 0.83,
+    "employment_rate": 0.75,
+    "housing_affordability": 0.48,
+    "energy_per_capita": 4200,
+    "co2_per_capita": 2.1
+  }
+}

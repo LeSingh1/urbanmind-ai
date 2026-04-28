@@ -1,0 +1,45 @@
+{
+  "id": "dubai",
+  "name": "Dubai",
+  "country": "United Arab Emirates",
+  "flag": "🇦🇪",
+  "center_lat": 25.2048,
+  "center_lng": 55.2708,
+  "default_zoom": 11,
+  "bounds": {
+    "min_lat": 24.98,
+    "max_lat": 25.40,
+    "min_lng": 54.90,
+    "max_lng": 55.65
+  },
+  "climate_zone": "Hot desert",
+  "population_current": 3604029,
+  "gdp_per_capita": 42000,
+  "urban_growth_rate": 0.032,
+  "key_planning_challenge": "Desert heat, water scarcity, and rapid greenfield growth",
+  "expansion_constraint": "Extreme heat, water desalination dependency, desert expansion",
+  "historical_snapshots": [
+    {"year": 1950, "population": 20000, "area_km2": 3885, "key_event": "Small pearl diving port"},
+    {"year": 1970, "population": 183187, "area_km2": 3885, "key_event": "Oil wealth begins"},
+    {"year": 1990, "population": 674101, "area_km2": 3885, "key_event": "Jebel Ali free zone"},
+    {"year": 2010, "population": 1905806, "area_km2": 4114, "key_event": "Burj Khalifa opens"},
+    {"year": 2024, "population": 3604029, "area_km2": 4114, "key_event": "COP28 climate host"}
+  ],
+  "initial_metrics": {
+    "population": 3604029,
+    "gdp_per_capita": 42000,
+    "commute_minutes": 40,
+    "aqi": 95,
+    "green_ratio": 0.06,
+    "equity_score": 0.48,
+    "transit_coverage": 0.38,
+    "flood_risk": 0.15,
+    "infrastructure_score": 0.85,
+    "hospital_beds_per_1k": 1.9,
+    "school_enrollment": 0.88,
+    "employment_rate": 0.92,
+    "housing_affordability": 0.42,
+    "energy_per_capita": 15200,
+    "co2_per_capita": 14.2
+  }
+}
