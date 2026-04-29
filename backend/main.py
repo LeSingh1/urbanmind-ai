@@ -1,15 +1,13 @@
-import asyncio
 import logging
-import uuid
 from contextlib import asynccontextmanager
-from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 from config import settings
-from routers import cities, simulation, ai_router, export
+from database import init_db
+from redis_client import close_redis, get_redis
+from routers import ai, cities, export, health, simulation
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,13 +15,19 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("UrbanMind AI backend starting...")
+    logger.info("UrbanMind AI backend starting")
+    await init_db()
+    try:
+        await (await get_redis()).ping()
+    except Exception as exc:
+        logger.warning("Redis startup ping failed: %s", exc)
     yield
-    logger.info("UrbanMind AI backend shutting down...")
+    await close_redis()
+    logger.info("UrbanMind AI backend stopped")
 
 
 app = FastAPI(
-    title="UrbanMind AI",
+    title=settings.app_name,
     description="Smart City Expansion Planner API",
     version="1.0.0",
     lifespan=lifespan,
@@ -37,36 +41,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
+app.include_router(health.router, tags=["health"])
 app.include_router(cities.router, prefix="/cities", tags=["cities"])
 app.include_router(simulation.router, prefix="/simulation", tags=["simulation"])
-app.include_router(ai_router.router, prefix="/ai", tags=["ai"])
-app.include_router(export.router, prefix="/export", tags=["export"])
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok", "model": settings.claude_model}
-
-
-# WebSocket manager
-from services.simulation_manager import SimulationManager
-
-manager = SimulationManager()
-
-
-@app.websocket("/ws/{session_id}")
-async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    await websocket.accept()
-    logger.info(f"WebSocket connected: {session_id}")
-
-    try:
-        await manager.run_session(session_id, websocket)
-    except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected: {session_id}")
-    except Exception as e:
-        logger.error(f"WebSocket error [{session_id}]: {e}")
-        try:
-            await websocket.send_json({"type": "ERROR", "message": str(e)})
-        except Exception:
-            pass
+app.include_router(simulation.ws_router, tags=["simulation"])
+app.include_router(ai.router, prefix="/ai", tags=["ai"])
+app.include_router(export.router, tags=["export"])

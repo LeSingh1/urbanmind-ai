@@ -49,7 +49,7 @@ export function AIPanel() {
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
-              <span className="text-base">{ZONE_ICONS[latestExplanation.zone_type as keyof typeof ZONE_ICONS] ?? '🏗️'}</span>
+              <span className="text-base">{ZONE_ICONS[latestExplanation.zone_type as keyof typeof ZONE_ICONS] ?? 'AI'}</span>
               <span className="text-xs font-medium text-accent-blue">{latestExplanation.zone_type}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -76,9 +76,9 @@ export function AIPanel() {
             {explanations.slice(1, 10).map((exp) => (
               <div key={exp.id} className="border-l-2 border-border-subtle pl-2 py-0.5">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-xs">{ZONE_ICONS[exp.zone_type as keyof typeof ZONE_ICONS] ?? '🏗️'}</span>
+                  <span className="text-xs">{ZONE_ICONS[exp.zone_type as keyof typeof ZONE_ICONS] ?? 'AI'}</span>
                   <span className="text-xs text-text-muted">{exp.zone_type} — Y{exp.year}</span>
-                  {exp.cached && <span className="text-xs text-text-muted">⚡</span>}
+                  {exp.cached && <span className="text-xs text-text-muted">cached</span>}
                 </div>
                 <p className="text-xs text-text-muted leading-relaxed line-clamp-2">{exp.explanation}</p>
               </div>
@@ -89,7 +89,6 @@ export function AIPanel() {
 
       {explanations.length === 0 && (
         <div className="text-center py-8">
-          <div className="text-3xl mb-2">🤖</div>
           <div className="text-sm text-text-muted">
             AI explanations will appear here as the simulation places zones
           </div>

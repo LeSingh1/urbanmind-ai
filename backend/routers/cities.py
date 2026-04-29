@@ -1,41 +1,77 @@
 import json
-import os
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database import get_session
+from models.city import City
+from schemas.city import CityDataResponse, CityResponse
 
 router = APIRouter()
-
-DATA_DIR = Path(__file__).parent.parent.parent / "data" / "cities"
-
-
-def load_cities():
-    cities = []
-    if not DATA_DIR.exists():
-        return cities
-    for f in sorted(DATA_DIR.glob("*.json")):
-        try:
-            with open(f) as fp:
-                cities.append(json.load(fp))
-        except Exception:
-            pass
-    return cities
+DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "cities"
 
 
-@router.get("")
-async def list_cities():
-    return load_cities()
-
-
-@router.get("/{city_id}")
-async def get_city(city_id: str):
-    path = DATA_DIR / f"{city_id}.json"
+def _load_city_profile(slug: str) -> dict:
+    path = DATA_DIR / f"{slug}.json"
     if not path.exists():
-        raise HTTPException(404, f"City '{city_id}' not found")
-    with open(path) as f:
-        return json.load(f)
+        return {}
+    with path.open() as file:
+        return json.load(file)
 
 
-@router.get("/{city_id}/profile/{year}")
-async def get_city_profile_at_year(city_id: str, year: int):
-    city = await get_city(city_id)
-    return {**city, "year": year}
+def _bounds_to_geojson(bounds: dict) -> dict:
+    if not bounds:
+        return {"type": "Feature", "geometry": None, "properties": {}}
+    min_lng, min_lat, max_lng, max_lat = bounds["bbox"]
+    return {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [min_lng, min_lat],
+                [max_lng, min_lat],
+                [max_lng, max_lat],
+                [min_lng, max_lat],
+                [min_lng, min_lat],
+            ]],
+        },
+    }
+
+
+async def _find_city(session: AsyncSession, city_id: str) -> City:
+    stmt = select(City).where(City.slug == city_id)
+    try:
+        stmt = select(City).where((City.slug == city_id) | (City.id == UUID(city_id)))
+    except ValueError:
+        pass
+    city = (await session.execute(stmt)).scalar_one_or_none()
+    if city is None:
+        raise HTTPException(status_code=404, detail=f"City '{city_id}' not found")
+    return city
+
+
+@router.get("", response_model=list[CityResponse])
+async def list_cities(session: AsyncSession = Depends(get_session)):
+    result = await session.execute(select(City).order_by(City.name))
+    return result.scalars().all()
+
+
+@router.get("/{city_id}/data", response_model=CityDataResponse)
+async def get_city_data(city_id: str, session: AsyncSession = Depends(get_session)):
+    city = await _find_city(session, city_id)
+    profile = _load_city_profile(city.slug)
+    boundary_geojson = _bounds_to_geojson(profile) if profile else {}
+    return {
+        **CityResponse.model_validate(city).model_dump(),
+        "boundary_geojson": boundary_geojson,
+        "profile": profile,
+    }
+
+
+@router.get("/{city_id}", response_model=CityResponse)
+async def get_city(city_id: str, session: AsyncSession = Depends(get_session)):
+    return await _find_city(session, city_id)

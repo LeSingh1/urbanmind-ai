@@ -24,6 +24,8 @@ frontend/node_modules/
 
 # Models
 models/
+!backend/models/
+!backend/models/*.py
 *.pt
 *.pth
 *.pkl

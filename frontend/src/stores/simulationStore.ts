@@ -1,108 +1,83 @@
 import { create } from 'zustand'
-import type { CityMetrics } from '@/types/city.types'
-import type {
-  SimulationStatus,
-  SimulationSession,
-  SimulationFrame,
-  PlacementAction,
-} from '@/types/simulation.types'
+import type { MetricsSnapshot } from '@/types/city.types'
+import type { AgentAction, SimulationFrame } from '@/types/simulation.types'
+
+type Speed = 1 | 5 | 10 | 50
 
 interface SimulationStore {
-  session: SimulationSession | null
-  status: SimulationStatus
+  sessionId: string | null
+  wsUrl: string | null
+  isRunning: boolean
+  isPaused: boolean
   currentYear: number
-  currentStep: number
-  totalSteps: number
-  currentMetrics: CityMetrics | null
-  metricsHistory: CityMetrics[]
-  recentActions: PlacementAction[]
-  lastFrame: SimulationFrame | null
-  replayFrames: SimulationFrame[]
-  isReplaying: boolean
-  replayIndex: number
-
-  setSession: (session: SimulationSession) => void
-  setStatus: (status: SimulationStatus) => void
-  applyFrame: (frame: SimulationFrame) => void
+  speed: Speed
+  currentFrame: SimulationFrame | null
+  frameHistory: SimulationFrame[]
+  metricsHistory: MetricsSnapshot[]
+  lastActions: AgentAction[]
+  startSimulation: (cityId: string, scenarioId: string, sandboxConfig?: Record<string, unknown>) => Promise<void>
+  setSession: (sessionId: string, wsUrl?: string) => void
+  pauseSimulation: () => void
+  resumeSimulation: () => void
+  setSpeed: (speed: number) => void
+  receiveFrame: (frame: SimulationFrame) => void
+  scrubToYear: (year: number) => void
   reset: () => void
-  startReplay: () => void
-  stepReplay: (direction: 1 | -1) => void
-  stopReplay: () => void
 }
 
+const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
+
 const initialState = {
-  session: null,
-  status: 'idle' as SimulationStatus,
-  currentYear: 2024,
-  currentStep: 0,
-  totalSteps: 0,
-  currentMetrics: null,
+  sessionId: null,
+  wsUrl: null,
+  isRunning: false,
+  isPaused: false,
+  currentYear: 0,
+  speed: 1 as Speed,
+  currentFrame: null,
+  frameHistory: [],
   metricsHistory: [],
-  recentActions: [],
-  lastFrame: null,
-  replayFrames: [],
-  isReplaying: false,
-  replayIndex: 0,
+  lastActions: [],
 }
 
 export const useSimulationStore = create<SimulationStore>((set, get) => ({
   ...initialState,
 
-  setSession: (session) => set({ session, status: 'running' }),
-  setStatus: (status) => set({ status }),
-
-  applyFrame: (frame) =>
-    set((state) => {
-      const newActions =
-        frame.action.zone_type === 'EMPTY'
-          ? state.recentActions
-          : [frame.action, ...state.recentActions].slice(0, 20)
-      const newHistory = [...state.metricsHistory, frame.metrics]
-      const newFrames = [...state.replayFrames, frame]
-
-      return {
-        lastFrame: frame,
-        currentYear: frame.year,
-        currentStep: frame.step,
-        totalSteps: frame.total_steps,
-        currentMetrics: frame.metrics,
-        metricsHistory: newHistory,
-        recentActions: newActions,
-        replayFrames: newFrames,
-      }
-    }),
-
-  reset: () => set(initialState),
-
-  startReplay: () =>
-    set((state) => ({
-      isReplaying: true,
-      replayIndex: 0,
-      currentMetrics: state.replayFrames[0]?.metrics ?? state.currentMetrics,
-      currentYear: state.replayFrames[0]?.year ?? state.currentYear,
-    })),
-
-  stepReplay: (direction) =>
-    set((state) => {
-      const newIndex = Math.max(
-        0,
-        Math.min(state.replayFrames.length - 1, state.replayIndex + direction)
-      )
-      const frame = state.replayFrames[newIndex]
-      return {
-        replayIndex: newIndex,
-        currentMetrics: frame?.metrics ?? state.currentMetrics,
-        currentYear: frame?.year ?? state.currentYear,
-      }
-    }),
-
-  stopReplay: () => {
-    const state = get()
+  startSimulation: async (cityId, scenarioId, sandboxConfig) => {
+    const response = await fetch(`${API_BASE}/simulation/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ city_id: cityId, scenario_id: scenarioId, sandbox_config: sandboxConfig }),
+    })
+    if (!response.ok) throw new Error(`Simulation start failed: HTTP ${response.status}`)
+    const data = await response.json()
     set({
-      isReplaying: false,
-      currentMetrics:
-        state.replayFrames[state.replayFrames.length - 1]?.metrics ??
-        state.currentMetrics,
+      ...initialState,
+      sessionId: data.session_id,
+      wsUrl: data.ws_url,
+      isRunning: true,
+      currentYear: 0,
     })
   },
+
+  setSession: (sessionId, wsUrl) => set({ sessionId, wsUrl: wsUrl ?? `/ws/${sessionId}`, isRunning: true }),
+  pauseSimulation: () => set({ isPaused: true, isRunning: false }),
+  resumeSimulation: () => set({ isPaused: false, isRunning: true }),
+  setSpeed: (speed) => set({ speed: ([1, 5, 10, 50].includes(speed) ? speed : 1) as Speed }),
+
+  receiveFrame: (frame) =>
+    set((state) => ({
+      currentFrame: frame,
+      currentYear: frame.year,
+      frameHistory: [...state.frameHistory.filter((item) => item.year !== frame.year), frame].sort((a, b) => a.year - b.year),
+      metricsHistory: [...state.metricsHistory.filter((item) => item.year !== frame.metrics_snapshot.year), frame.metrics_snapshot].sort((a, b) => a.year - b.year),
+      lastActions: [...frame.agent_actions, ...state.lastActions].slice(0, 10),
+    })),
+
+  scrubToYear: (year) => {
+    const frame = get().frameHistory.find((item) => item.year === year)
+    if (frame) set({ currentFrame: frame, currentYear: frame.year })
+  },
+
+  reset: () => set(initialState),
 }))

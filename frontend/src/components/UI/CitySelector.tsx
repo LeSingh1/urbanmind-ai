@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { ArrowRight, Building2, Map, Users } from 'lucide-react'
 import { useCityStore } from '@/stores/cityStore'
 import type { CityProfile } from '@/types/city.types'
 import { STATIC_CITIES } from '@/data/staticCities'
@@ -21,24 +22,22 @@ export function CitySelector({ onCitySelected }: CitySelectorProps) {
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-bg-primary flex flex-col items-center justify-center p-8 overflow-auto"
-    >
+    <div className="city-select-shell fixed inset-0 bg-bg-primary overflow-auto">
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="text-center mb-10"
+        className="city-select-header"
       >
-        <h2 className="text-4xl font-bold text-text-primary mb-2">
-          Choose Your City
-        </h2>
-        <p className="text-text-secondary">
-          Select a real-world city profile to begin the simulation
-        </p>
+        <div className="city-select-mark">
+          <Building2 size={24} />
+          <span>UrbanMind AI</span>
+        </div>
+        <h1>Plan a City Expansion</h1>
+        <p>Choose a planning context and start the year-by-year growth model.</p>
       </motion.div>
 
-      <div className="grid grid-cols-3 gap-4 max-w-4xl w-full">
+      <div className="city-grid">
         {displayCities.map((city, i) => (
           <motion.button
             key={city.id}
@@ -50,24 +49,27 @@ export function CitySelector({ onCitySelected }: CitySelectorProps) {
             onHoverStart={() => setHoveredId(city.id)}
             onHoverEnd={() => setHoveredId(null)}
             onClick={() => handleSelect(city)}
-            className="relative bg-bg-card border border-border-subtle rounded-xl p-5 text-left transition-all hover:border-accent-blue group"
+            className="city-card group"
           >
             {hoveredId === city.id && (
               <motion.div
                 layoutId="city-highlight"
-                className="absolute inset-0 rounded-xl bg-accent-blue/5 border border-accent-blue"
+                className="city-card-highlight"
               />
             )}
             <div className="relative z-10">
-              <div className="text-3xl mb-2">{city.thumbnail}</div>
-              <h3 className="font-semibold text-text-primary text-lg">{city.name}</h3>
-              <p className="text-text-muted text-xs mb-2">{city.country}</p>
-              <p className="text-text-secondary text-xs leading-relaxed line-clamp-2">
+              <div className="city-card-top">
+                <div className="city-code">{city.thumbnail}</div>
+                <ArrowRight size={16} className="city-arrow" />
+              </div>
+              <h3>{city.name}</h3>
+              <p className="city-country">{city.country}</p>
+              <p className="city-description">
                 {city.description}
               </p>
-              <div className="mt-3 flex gap-3 text-xs text-text-muted">
-                <span>👥 {(city.population / 1e6).toFixed(1)}M</span>
-                <span>🌡️ {city.climate_zone}</span>
+              <div className="city-card-meta">
+                <span><Users size={13} /> {(city.population / 1e6).toFixed(1)}M</span>
+                <span><Map size={13} /> {city.climate_zone}</span>
               </div>
             </div>
           </motion.button>
@@ -92,17 +94,23 @@ export function CitySelector({ onCitySelected }: CitySelectorProps) {
             description: 'A blank canvas with procedurally generated terrain. Build from scratch.',
             climate_zone: 'Temperate',
             initial_metrics: STATIC_CITIES[1].initial_metrics,
-            thumbnail: '🏗️',
+            thumbnail: 'NEW',
           })}
-          className="bg-bg-card border border-dashed border-border-active rounded-xl p-5 text-left hover:border-accent-cyan group"
+          className="city-card city-card--sandbox group"
         >
-          <div className="text-3xl mb-2">🏗️</div>
-          <h3 className="font-semibold text-text-primary text-lg">Sandbox City</h3>
-          <p className="text-text-muted text-xs mb-2">Procedural</p>
-          <p className="text-text-secondary text-xs leading-relaxed">
+          <div className="city-card-top">
+            <div className="city-code">NEW</div>
+            <ArrowRight size={16} className="city-arrow" />
+          </div>
+          <h3>Sandbox City</h3>
+          <p className="city-country">Procedural</p>
+          <p className="city-description">
             Start from scratch with procedurally generated terrain and no existing infrastructure.
           </p>
-          <div className="mt-3 text-xs text-accent-cyan">Free build mode</div>
+          <div className="city-card-meta">
+            <span><Users size={13} /> 0.1M</span>
+            <span><Map size={13} /> Temperate</span>
+          </div>
         </motion.button>
       </div>
     </div>

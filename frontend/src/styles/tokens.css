@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400&display=swap');
+
+:root {
+  --color-brand-primary: #1B4F8A;
+  --color-brand-secondary: #2E86C1;
+  --color-brand-accent: #17A589;
+  --color-brand-warning: #D4AC0D;
+  --color-brand-danger: #C0392B;
+  --color-bg-app: #0D1117;
+  --color-bg-sidebar: #111827;
+  --color-bg-panel: #1F2937;
+  --color-bg-card: #374151;
+  --color-bg-hover: #4B5563;
+  --color-border-subtle: #2D3748;
+  --color-border-active: #2E86C1;
+  --color-text-primary: #F9FAFB;
+  --color-text-secondary: #9CA3AF;
+  --color-text-muted: #6B7280;
+  --color-text-accent: #60A5FA;
+  --chart-grid: rgba(156, 163, 175, 0.22);
+  --chart-line-primary: #60A5FA;
+  --chart-line-baseline: #9CA3AF;
+  --zone-res-low: #F5CBA7;
+  --zone-res-med: #E59866;
+  --zone-res-high: #CA6F1E;
+  --zone-industrial: #5D6D7E;
+  --zone-commercial: #2E86C1;
+  --zone-mixed-use: #A9DFBF;
+  --zone-green: #27AE60;
+  --zone-forest: #1E8449;
+  --zone-transit: #8E44AD;
+  --zone-health: #E74C3C;
+  --zone-education: #F9E79F;
+  --zone-utility: #7D6608;
+  --zone-government: #5D4E75;
+  --zone-culture: #D4AC0D;
+  --zone-disaster: #E67E22;
+  --zone-smart: #00BCD4;
+  --zone-waterfront: #1A6B8A;
+  --zone-landmark: #C0392B;
+  --zone-office: #2980B9;
+  --zone-food: #27AE60;
+  --font-primary: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+  --transition-fast: 150ms ease-in-out;
+  --transition-med: 200ms ease-in-out;
+  --transition-slow: 350ms cubic-bezier(0.16,1,0.3,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}

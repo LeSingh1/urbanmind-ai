@@ -1,6 +1,63 @@
 version: "3.9"
 
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: urbanmind-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
+    depends_on:
+      - api
+    networks:
+      - urbanmind
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: urbanmind-api
+    command: sh -c "alembic -c alembic.ini upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.example
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./ai_engine:/app/ai_engine
+      - ./data:/app/data
+    networks:
+      - urbanmind
+
+  worker:
+    image: urbanmind-api
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m worker.worker
+    env_file:
+      - .env.example
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./ai_engine:/app/ai_engine
+      - ./data:/app/data
+    networks:
+      - urbanmind
+
   postgres:
     image: postgis/postgis:16-3.4
     environment:
@@ -12,13 +69,16 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U urbanmind"]
+      test: ["CMD-SHELL", "pg_isready -U urbanmind -d urbanmind"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - urbanmind
 
   redis:
     image: redis:7-alpine
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
@@ -28,6 +88,22 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    networks:
+      - urbanmind
+
+  nginx:
+    image: nginx:1.26-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - frontend
+      - api
+    networks:
+      - urbanmind
 
   minio:
     image: minio/minio:latest
@@ -40,71 +116,16 @@ services:
       - "9001:9001"
     volumes:
       - minio_data:/data
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://urbanmind:urbanmind@postgres/urbanmind
-      - REDIS_URL=redis://redis:6379/0
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - MAPBOX_TOKEN=${MAPBOX_TOKEN}
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ../data:/app/data
-      - ../ai_engine:/app/ai_engine
-    restart: unless-stopped
-
-  worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: python -m worker.worker
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://urbanmind:urbanmind@postgres/urbanmind
-      - REDIS_URL=redis://redis:6379/0
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    depends_on:
-      redis:
-        condition: service_healthy
-    volumes:
-      - ../data:/app/data
-      - ../ai_engine:/app/ai_engine
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    environment:
-      - VITE_MAPBOX_TOKEN=${MAPBOX_TOKEN}
-      - VITE_API_URL=http://localhost:8000
-    depends_on:
-      - backend
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
-      - frontend
+    networks:
+      - urbanmind
 
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+  nginx_cache:
+  frontend_node_modules:
+
+networks:
+  urbanmind:
+    driver: bridge

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useSimulationStore } from '@/stores/simulationStore'
 import { ZONE_LABELS, ZONE_ICONS, ZONE_COLORS } from '@/utils/colorUtils'
+import type { PlacementAction } from '@/types/simulation.types'
 
 export function ActionsPanel() {
   const { recentActions, currentYear, currentStep, totalSteps } = useSimulationStore()
@@ -81,7 +82,7 @@ export function ActionsPanel() {
   )
 }
 
-function ZoneDistribution({ actions }: { actions: typeof useSimulationStore extends () => infer T ? T extends { recentActions: infer A } ? A : never : never }) {
+function ZoneDistribution({ actions }: { actions: PlacementAction[] }) {
   const counts: Record<string, number> = {}
   actions.forEach((a) => {
     counts[a.zone_type] = (counts[a.zone_type] ?? 0) + 1

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Building2 } from 'lucide-react'
 
 export function LoadingScreen() {
   return (
@@ -21,7 +22,7 @@ export function LoadingScreen() {
               animate={{ rotate: [0, 5, -5, 0] }}
               transition={{ duration: 3, repeat: Infinity }}
             >
-              🏙️
+              <Building2 size={34} />
             </motion.div>
             <motion.div
               className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-accent-blue to-accent-cyan opacity-30 blur-md"

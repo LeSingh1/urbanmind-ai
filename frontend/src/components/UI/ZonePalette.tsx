@@ -51,7 +51,7 @@ export function ZonePalette({ ws: _ws }: ZonePaletteProps) {
             : 'bg-accent-blue/20 text-accent-blue border border-accent-blue/30 hover:bg-accent-blue/30'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
-        {isPlacementMode ? '✕ Exit Placement Mode' : '+ Enter Placement Mode'}
+        {isPlacementMode ? 'x Exit Placement Mode' : '+ Enter Placement Mode'}
       </button>
 
       {/* Zone categories */}
@@ -95,7 +95,7 @@ export function ZonePalette({ ws: _ws }: ZonePaletteProps) {
         onClick={() => handleZoneSelect('EMPTY')}
         className="w-full py-1.5 border border-dashed border-border-subtle rounded-lg text-xs text-text-muted hover:text-text-secondary hover:border-border-active transition-all"
       >
-        🗑️ Clear Zone (EMPTY)
+        Clear Zone (EMPTY)
       </button>
     </div>
   )

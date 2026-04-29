@@ -1,103 +1,85 @@
-# UrbanMind AI — Smart City Expansion Planner
+# UrbanMind AI
 
-An AI-powered full-stack application that simulates 50 years of city expansion using reinforcement learning heuristics, real geospatial data, and Claude-powered planning explanations.
+> AI-powered smart city expansion planner for the AI Autonomous Smart City Hackathon 2026.
+
+[Demo Video Link] | [Live Demo] | [Documentation]
+
+## What It Does
+
+UrbanMind AI helps planners explore how real cities can expand over the next 50 years. It combines live city maps, zoning constraints, infrastructure placement, growth metrics, and AI-generated planning explanations into one interactive simulation.
+
+The app lets a user select one of nine global cities, choose a planning scenario, and watch an autonomous agent place housing, roads, services, utilities, parks, and resilience infrastructure year by year. The map, metrics, charts, timeline, and AI decision history update as the simulation runs.
+
+The impact is a faster way to compare urban futures. Planners can test growth-first, equity-first, climate-resilient, historic, and balanced strategies, then export a professional report that explains tradeoffs in population, mobility, emissions, green space, infrastructure load, and public-service coverage.
+
+## Quick Start
+
+```bash
+git clone https://github.com/yourusername/urbanmind-ai
+cd urbanmind-ai
+cp .env.example .env
+# Add ANTHROPIC_API_KEY and MAPBOX_TOKEN to .env
+docker-compose up
+# Open http://localhost
+```
+
+## Tech Stack
+
+React, TypeScript, Vite, Mapbox GL, D3, Zustand, Framer Motion, Python, FastAPI, PostgreSQL/PostGIS, Redis, RQ, MinIO, Docker Compose, OSMnx, GeoPandas, PyTorch, Stable Baselines3, Anthropic Claude.
+
+## AI Architecture
+
+UrbanMind AI is structured around a reinforcement-learning simulation loop. The agent observes a geospatial grid, existing roads, terrain suitability, city metrics, and scenario weights, then chooses the next zone or infrastructure placement. Phase 2 provides the AI-engine foundation for PPO-style optimization, constraint validation, road generation, demand forecasting, and population modeling.
+
+The backend streams each simulation frame through Redis and WebSockets. The frontend renders those frames as Mapbox layers and D3 analytics. Claude powers the narrative layer: hover explanations, annual summaries, decision history, report summaries, and recommendations.
 
 ## Features
 
-- 9 real-world cities (NYC, Tokyo, LA, London, Lagos, São Paulo, Singapore, Dubai, Mumbai)
-- 5 planning scenarios: Maximum Growth, Balanced Sustainable, Climate Resilient, Equity Focused, Historic Pattern
-- Real-time WebSocket simulation streaming zone placements year by year
-- Claude API integration for plain-English zone placement explanations
-- D3.js metrics dashboard with 20+ city health metrics
-- User override system — pause and place zones manually
-- Sandbox city generator with Perlin noise terrain
-- Mapbox GL JS dark map with GeoJSON zone rendering
+- Real-city planning for New York, Los Angeles, Tokyo, Lagos, London, Sao Paulo, Singapore, Dubai, and Mumbai
+- Year-by-year WebSocket simulation playback
+- Mapbox zones, roads, heatmaps, and 3D building extrusions
+- Scenario selector for balanced, max growth, climate resilient, equity focused, and historic plans
+- Six live D3 dashboard charts
+- AI decision tooltips and explanation drawer
+- Split-screen scenario comparison
+- Procedural sandbox city generator
+- ReportLab PDF export
+- Keyboard navigation, ARIA labels, and color-blind-friendly secondary cues
 
-## Quick Start (Local, No Docker)
+## Screenshots
 
-### Backend
+- Landing and city gallery
+- Tokyo simulation map
+- Analytics dashboard
+- AI explanation tooltip
+- Split-screen comparison
+- Sandbox terrain generator
+- PDF report export
 
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+## Hackathon Category
 
-# Copy env file and add your keys
-cp ../.env.example .env
-# Edit .env: add ANTHROPIC_API_KEY and MAPBOX_TOKEN
+Smart Traffic and Mobility, Smart Energy Management, Urban Healthcare, and Public Safety Infrastructure.
 
-uvicorn main:app --reload --port 8000
-```
+## Team
 
-### Frontend
+See `members.csv` for team roster details.
 
-```bash
-cd frontend
-npm install
+## License
 
-# Copy env file
-cp .env.example .env.local
-# Edit .env.local: add VITE_MAPBOX_TOKEN
+MIT
 
-npm run dev
-```
+## Demo Video Script
 
-Open http://localhost:3000
+0:00-0:30: Show Tokyo at Year 2074 and introduce the 50-year planning question.
 
-### With Docker Compose (requires Docker Desktop)
+0:30-1:20: Open the gallery, select Lagos, and choose the Equity Focused scenario.
 
-```bash
-cp .env.example .env
-# Edit .env with your API keys
+1:20-2:30: Run playback at 10x. Pause at Year 20 and hover a hospital placement to show the AI explanation.
 
-docker-compose up --build
-```
+2:30-3:15: Demonstrate a manual override and show how metrics respond.
 
-Open http://localhost
+3:15-4:00: Open the dashboard and explain the population timeline, radar chart, and infrastructure scatter.
 
-## Architecture
+4:00-4:30: Compare Equity Focused against Max Growth in split-screen mode.
 
-```
-frontend/          React 18 + TypeScript + Vite + Mapbox GL + D3.js + Zustand
-backend/           FastAPI + WebSockets + Redis cache + Pydantic
-ai_engine/         SPS heuristic simulation engine (PPO-ready with SB3)
-data/cities/       9 real-world city JSON profiles
-data/zone_types.json  20 zone type definitions
-```
-
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `ANTHROPIC_API_KEY` | Anthropic Claude API key |
-| `MAPBOX_TOKEN` | Mapbox public token (starts with `pk.`) |
-| `REDIS_URL` | Redis connection URL (optional, uses in-memory fallback) |
-| `DATABASE_URL` | PostgreSQL URL (optional for basic usage) |
-
-## Zone Types
-
-20 zone types across 7 categories: Residential (low/med/high), Commercial (retail/office), Industrial (light/heavy), Mixed Use, Green (park/forest), Health, Education, Infrastructure, Transport, Safety.
-
-## Scenarios
-
-| Scenario | Focus |
-|----------|-------|
-| Maximum Growth | Economic output, density, GDP |
-| Balanced Sustainable | Equal weights across all metrics |
-| Climate Resilient | Flood risk, green ratio, disaster preparedness |
-| Equity Focused | Equitable access to services and housing |
-| Historic Pattern | Extrapolates historical growth direction |
-
-## WebSocket Protocol
-
-| Message | Direction | Description |
-|---------|-----------|-------------|
-| `SIM_INIT` | Server→Client | City loaded, initial state |
-| `SIM_FRAME` | Server→Client | Year update with zones + metrics |
-| `SIM_COMPLETE` | Server→Client | 50-year simulation finished |
-| `USER_OVERRIDE` | Client→Server | Manual zone placement |
-| `SCENARIO_CHANGE` | Client→Server | Switch scenario mid-run |
-| `PAUSE` / `RESUME` | Client→Server | Control playback |
-
-## Hackathon: AI Autonomous Smart City Hackathon 2026
+4:30-5:00: Generate a coastal sandbox city, start the simulation, and export the PDF report.

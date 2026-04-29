@@ -55,7 +55,7 @@ export function RightPanel() {
         <div className="p-3 border-b border-border-subtle shrink-0">
           <div className="text-xs text-text-muted uppercase tracking-wide mb-2">AI Insight</div>
           <div className="flex items-center gap-1.5 mb-2">
-            <span className="text-sm">{ZONE_ICONS[latestExplanation.zone_type as keyof typeof ZONE_ICONS] ?? '🏗️'}</span>
+            <span className="text-sm">{ZONE_ICONS[latestExplanation.zone_type as keyof typeof ZONE_ICONS] ?? 'AI'}</span>
             <span className="text-xs font-medium text-text-secondary">{latestExplanation.zone_type}</span>
             <span className="text-xs text-text-muted">— Year {latestExplanation.year}</span>
           </div>

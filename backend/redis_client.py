@@ -1,56 +1,59 @@
-import redis.asyncio as aioredis
-from config import settings
+import json
 import logging
+from typing import Any
+
+import redis
+import redis.asyncio as aioredis
+
+from config import settings
 
 logger = logging.getLogger(__name__)
 
-_redis: aioredis.Redis | None = None
+_async_client: aioredis.Redis | None = None
+_sync_client: redis.Redis | None = None
 
 
 async def get_redis() -> aioredis.Redis:
-    global _redis
-    if _redis is None:
-        try:
-            _redis = aioredis.from_url(settings.redis_url, decode_responses=True)
-            await _redis.ping()
-        except Exception as e:
-            logger.warning(f"Redis unavailable: {e}. Using in-memory fallback.")
-            _redis = None
-    return _redis
+    global _async_client
+    if _async_client is None:
+        _async_client = aioredis.from_url(settings.redis_url, decode_responses=True)
+    return _async_client
 
 
-class InMemoryCache:
-    _store: dict = {}
-
-    async def get(self, key: str) -> str | None:
-        return self._store.get(key)
-
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
-        self._store[key] = value
-
-    async def exists(self, key: str) -> bool:
-        return key in self._store
+def get_sync_redis() -> redis.Redis:
+    global _sync_client
+    if _sync_client is None:
+        _sync_client = redis.from_url(settings.redis_url, decode_responses=False)
+    return _sync_client
 
 
-_mem_cache = InMemoryCache()
+async def check_redis() -> bool:
+    try:
+        client = await get_redis()
+        await client.ping()
+        return True
+    except Exception as exc:
+        logger.warning("Redis health check failed: %s", exc)
+        return False
+
+
+async def publish_json(channel: str, payload: dict[str, Any]) -> None:
+    client = await get_redis()
+    await client.publish(channel, json.dumps(payload))
 
 
 async def cache_get(key: str) -> str | None:
     client = await get_redis()
-    if client:
-        try:
-            return await client.get(key)
-        except Exception:
-            pass
-    return await _mem_cache.get(key)
+    return await client.get(key)
 
 
-async def cache_set(key: str, value: str, ttl: int = 86400) -> None:
+async def cache_set(key: str, value: str | bytes, ttl: int) -> None:
     client = await get_redis()
-    if client:
-        try:
-            await client.set(key, value, ex=ttl)
-            return
-        except Exception:
-            pass
-    await _mem_cache.set(key, value)
+    await client.set(key, value, ex=ttl)
+
+
+async def close_redis() -> None:
+    global _async_client
+    if _async_client is not None:
+        await _async_client.aclose()
+        _async_client = None

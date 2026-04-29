@@ -1,422 +1,235 @@
-import { useRef, useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useCityStore } from '@/stores/cityStore'
 import { useSimulationStore } from '@/stores/simulationStore'
 import { useUIStore } from '@/stores/uiStore'
-import { gridToGeoJSON, lngLatToCell } from '@/utils/geoUtils'
-import { ZONE_COLORS, ZONE_LABELS } from '@/utils/colorUtils'
-import type { ZoneType } from '@/types/city.types'
-import { MapControls } from './MapControls'
-import { CellTooltip } from './CellTooltip'
-import { PlacementIndicator } from './PlacementIndicator'
+import { getZoneColor, lightenHex } from '@/utils/colorUtils'
+import { ExplanationTooltip } from './ExplanationTooltip'
+import { MiniMetricsPanel } from './MiniMetricsPanel'
+import { SplitScreenView } from '@/components/Layout/SplitScreenView'
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
-const hasMapboxToken = typeof MAPBOX_TOKEN === 'string' && MAPBOX_TOKEN.startsWith('pk.')
+const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
 
-if (hasMapboxToken) {
-  mapboxgl.accessToken = MAPBOX_TOKEN
-}
+export function MapContainer() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<mapboxgl.Map | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [hovered, setHovered] = useState<{ x: number; y: number; lngLat: mapboxgl.LngLat; properties: any } | null>(null)
+  const city = useCityStore((state) => state.selectedCity)
+  const frame = useSimulationStore((state) => state.currentFrame)
+  const activeLayers = useUIStore((state) => state.activeLayers)
+  const selectedOverrideZone = useUIStore((state) => state.selectedOverrideZone)
+  const isSplitScreen = useUIStore((state) => state.isSplitScreen)
 
-interface MapContainerProps {
-  ws: { override: (x: number, y: number, zone: string) => void }
-}
+  const fallbackFrame = useMemo(() => city ? makeInitialCityFrame(city) : null, [city])
+  const visibleFrame = frame ?? fallbackFrame
 
-export function MapContainer({ ws }: MapContainerProps) {
-  const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<mapboxgl.Map | null>(null)
-  const [mapReady, setMapReady] = useState(false)
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
-
-  const { selectedCity, grid, setHoveredCell, setSelectedCell, updateCell } = useCityStore()
-  const { lastFrame } = useSimulationStore()
-  const { isPlacementMode, selectedZoneForPlacement, activeMapLayer, showGrid } = useUIStore()
-
-  if (!hasMapboxToken) {
-    return (
-      <LocalMapFallback
-        isPlacementMode={isPlacementMode}
-        selectedZoneForPlacement={selectedZoneForPlacement}
-        onPlace={(x, y) => {
-          if (!selectedZoneForPlacement) return
-          ws.override(x, y, selectedZoneForPlacement)
-          updateCell(x, y, selectedZoneForPlacement as ZoneType)
-        }}
-      />
-    )
-  }
-
-  // Init map
   useEffect(() => {
-    if (!mapContainer.current || map.current) return
-
-    const center: [number, number] = selectedCity
-      ? [selectedCity.coordinates.lng, selectedCity.coordinates.lat]
-      : [-74.006, 40.7128]
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center,
-      zoom: selectedCity ? 11 : 10,
-      pitch: 30,
+    const token = import.meta.env.VITE_MAPBOX_TOKEN
+    if (!containerRef.current || mapRef.current || !token) return
+    mapboxgl.accessToken = token
+    mapRef.current = new mapboxgl.Map({
+      container: containerRef.current,
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      center: city ? [city.center_lng, city.center_lat] : [-74.01, 40.71],
+      zoom: city?.default_zoom ?? 10,
+      pitch: 45,
       bearing: 0,
       antialias: true,
     })
-
-    map.current.on('load', () => {
-      const m = map.current!
-
-      // Zone fill layer
-      m.addSource('zones', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      })
-
-      m.addLayer({
-        id: 'zones-fill',
-        type: 'fill',
-        source: 'zones',
-        paint: {
-          'fill-color': buildZoneColorExpression(),
-          'fill-opacity': 0.75,
-        },
-      })
-
-      m.addLayer({
-        id: 'zones-outline',
-        type: 'line',
-        source: 'zones',
-        paint: {
-          'line-color': 'rgba(255,255,255,0.1)',
-          'line-width': 0.5,
-        },
-      })
-
-      // Highlight layer (for hover)
-      m.addSource('highlight', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      })
-      m.addLayer({
-        id: 'highlight-fill',
-        type: 'fill',
-        source: 'highlight',
-        paint: {
-          'fill-color': '#ffffff',
-          'fill-opacity': 0.2,
-        },
-      })
-
-      // Last-placed zone flash
-      m.addSource('flash', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      })
-      m.addLayer({
-        id: 'flash-fill',
-        type: 'fill',
-        source: 'flash',
-        paint: {
-          'fill-color': '#ffffff',
-          'fill-opacity': ['interpolate', ['linear'], ['get', 'opacity'], 0, 0, 1, 0.6],
-        },
-      })
-
-      setMapReady(true)
+    mapRef.current.on('load', () => {
+      addSourcesAndLayers(mapRef.current!)
+      setLoaded(true)
     })
-
     return () => {
-      map.current?.remove()
-      map.current = null
+      mapRef.current?.remove()
+      mapRef.current = null
     }
   }, [])
 
-  // Update zone source when grid changes
   useEffect(() => {
-    if (!map.current || !mapReady || !selectedCity || grid.length === 0) return
-    const m = map.current
-    const source = m.getSource('zones') as mapboxgl.GeoJSONSource
-    if (!source) return
-    source.setData(gridToGeoJSON(grid, selectedCity))
-  }, [grid, mapReady, selectedCity])
+    if (!mapRef.current || !loaded || !city) return
+    mapRef.current.flyTo({ center: [city.center_lng, city.center_lat], zoom: city.default_zoom, pitch: activeLayers.has('3D Buildings') ? 45 : 0, duration: 2000 })
+    setSource('boundary-source', boundaryGeojson(city))
+  }, [activeLayers, city, loaded])
 
-  // Flash on new placement
   useEffect(() => {
-    if (!map.current || !mapReady || !lastFrame || !selectedCity) return
-    const m = map.current
-    const flashSource = m.getSource('flash') as mapboxgl.GeoJSONSource
-    if (!flashSource) return
+    if (!mapRef.current || !loaded || !visibleFrame) return
+    setSource('zones-source', withZonePaint(visibleFrame.zones_geojson))
+    setSource('roads-source', visibleFrame.roads_geojson)
+    setSource('buildings-source', withZonePaint(visibleFrame.zones_geojson))
+    setSource('heatmap-source', zoneCentroids(visibleFrame.zones_geojson))
+    flashNewZones(mapRef.current, visibleFrame)
+  }, [loaded, visibleFrame])
 
-    const { x, y } = lastFrame.action
-    const cell = grid[y]?.[x]
-    if (!cell) return
-
-    const bb = selectedCity.bounding_box
-    const latStep = (bb.north - bb.south) / selectedCity.grid_size.rows
-    const lngStep = (bb.east - bb.west) / selectedCity.grid_size.cols
-
-    const feature = {
-      type: 'Feature' as const,
-      properties: { opacity: 1 },
-      geometry: {
-        type: 'Polygon' as const,
-        coordinates: [[
-          [bb.west + x * lngStep, bb.north - (y + 1) * latStep],
-          [bb.west + (x + 1) * lngStep, bb.north - (y + 1) * latStep],
-          [bb.west + (x + 1) * lngStep, bb.north - y * latStep],
-          [bb.west + x * lngStep, bb.north - y * latStep],
-          [bb.west + x * lngStep, bb.north - (y + 1) * latStep],
-        ]],
-      },
-    }
-
-    flashSource.setData({ type: 'FeatureCollection', features: [feature] })
-    setTimeout(() => flashSource.setData({ type: 'FeatureCollection', features: [] }), 600)
-  }, [lastFrame, mapReady, selectedCity, grid])
-
-  // Mouse events
   useEffect(() => {
-    if (!map.current || !mapReady || !selectedCity) return
-    const m = map.current
+    if (!mapRef.current || !loaded) return
+    const m = mapRef.current
+    setVisibility(m, ['zones-fill', 'zones-outline'], activeLayers.has('Zones'))
+    setVisibility(m, ['roads-line'], activeLayers.has('Roads'))
+    setVisibility(m, ['building-extrusion'], activeLayers.has('3D Buildings'))
+    setVisibility(m, ['population-heatmap'], activeLayers.has('Population Heatmap'))
+    m.easeTo({ pitch: activeLayers.has('3D Buildings') ? 45 : 0, duration: 450 })
+  }, [activeLayers, loaded])
 
-    const handleMouseMove = (e: mapboxgl.MapMouseEvent) => {
-      const cell = lngLatToCell(e.lngLat.lng, e.lngLat.lat, selectedCity)
-      if (cell) {
-        const gridCell = grid[cell.y]?.[cell.x]
-        if (gridCell) {
-          setHoveredCell(gridCell)
-          setTooltipPos({ x: e.point.x, y: e.point.y })
-
-          // Update highlight
-          const src = m.getSource('highlight') as mapboxgl.GeoJSONSource
-          if (src) {
-            const bb = selectedCity.bounding_box
-            const latS = (bb.north - bb.south) / selectedCity.grid_size.rows
-            const lngS = (bb.east - bb.west) / selectedCity.grid_size.cols
-            src.setData({
-              type: 'FeatureCollection',
-              features: [{
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                  type: 'Polygon',
-                  coordinates: [[
-                    [bb.west + cell.x * lngS, bb.north - (cell.y + 1) * latS],
-                    [bb.west + (cell.x + 1) * lngS, bb.north - (cell.y + 1) * latS],
-                    [bb.west + (cell.x + 1) * lngS, bb.north - cell.y * latS],
-                    [bb.west + cell.x * lngS, bb.north - cell.y * latS],
-                    [bb.west + cell.x * lngS, bb.north - (cell.y + 1) * latS],
-                  ]],
-                },
-              }],
-            })
-          }
-        }
+  useEffect(() => {
+    if (!mapRef.current || !loaded) return
+    const m = mapRef.current
+    const move = (event: mapboxgl.MapMouseEvent) => {
+      const features = m.queryRenderedFeatures(event.point, { layers: ['zones-fill'] })
+      if (features[0]) {
+        m.getCanvas().style.cursor = selectedOverrideZone ? 'crosshair' : 'pointer'
+        setHovered({ x: event.point.x, y: event.point.y, lngLat: event.lngLat, properties: features[0].properties })
       } else {
-        setHoveredCell(null)
-        setTooltipPos(null)
+        m.getCanvas().style.cursor = selectedOverrideZone ? 'crosshair' : ''
+        setHovered(null)
       }
     }
-
-    const handleMouseLeave = () => {
-      setHoveredCell(null)
-      setTooltipPos(null)
-      const src = m.getSource('highlight') as mapboxgl.GeoJSONSource
-      src?.setData({ type: 'FeatureCollection', features: [] })
-    }
-
-    const handleClick = (e: mapboxgl.MapMouseEvent) => {
-      if (!isPlacementMode || !selectedZoneForPlacement) return
-      const cell = lngLatToCell(e.lngLat.lng, e.lngLat.lat, selectedCity)
-      if (cell) {
-        ws.override(cell.x, cell.y, selectedZoneForPlacement)
-        updateCell(cell.x, cell.y, selectedZoneForPlacement as ZoneType)
-      }
-    }
-
-    m.on('mousemove', handleMouseMove)
-    m.on('mouseleave', handleMouseLeave)
-    m.on('click', handleClick)
-
+    const leave = () => setHovered(null)
+    m.on('mousemove', move)
+    m.on('mouseleave', leave)
     return () => {
-      m.off('mousemove', handleMouseMove)
-      m.off('mouseleave', handleMouseLeave)
-      m.off('click', handleClick)
+      m.off('mousemove', move)
+      m.off('mouseleave', leave)
     }
-  }, [mapReady, selectedCity, grid, isPlacementMode, selectedZoneForPlacement, setHoveredCell, updateCell, ws])
+  }, [loaded, selectedOverrideZone])
 
+  const noToken = !import.meta.env.VITE_MAPBOX_TOKEN
   return (
-    <div className="flex-1 relative overflow-hidden">
-      <div ref={mapContainer} className={`w-full h-full ${isPlacementMode ? 'placement-cursor' : ''}`} />
-
-      <AnimatePresence>
-        {!mapReady && (
-          <motion.div
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-bg-primary flex items-center justify-center"
-          >
-            <div className="text-text-muted text-sm font-mono animate-pulse">Loading map...</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {mapReady && map.current && (
-        <MapControls map={map.current} />
-      )}
-
-      {tooltipPos && <CellTooltip position={tooltipPos} />}
-
-      {isPlacementMode && selectedZoneForPlacement && (
-        <PlacementIndicator zone={selectedZoneForPlacement} />
-      )}
-    </div>
+    <main tabIndex={0} aria-label={`City simulation map for ${city?.name ?? 'selected city'}, currently showing Year ${visibleFrame?.year ?? 0}`} style={{ position: 'fixed', top: 56, left: 320, right: 0, bottom: 64, background: '#080B10' }}>
+      {isSplitScreen ? <SplitScreenView /> : noToken ? <LocalMap city={city?.name ?? 'Selected city'} /> : <div ref={containerRef} style={{ width: '100%', height: '100%' }} />}
+      {hovered && <ExplanationTooltip hover={hovered} />}
+      <MiniMetricsPanel />
+    </main>
   )
+
+  function setSource(id: string, data: GeoJSON.FeatureCollection) {
+    const source = mapRef.current?.getSource(id) as mapboxgl.GeoJSONSource | undefined
+    source?.setData(data)
+  }
 }
 
-function LocalMapFallback({
-  isPlacementMode,
-  selectedZoneForPlacement,
-  onPlace,
-}: {
-  isPlacementMode: boolean
-  selectedZoneForPlacement: string | null
-  onPlace: (x: number, y: number) => void
-}) {
-  const { selectedCity } = useCityStore()
-  const { recentActions } = useSimulationStore()
-  const cols = 24
-  const rows = 16
-  const actionZones = new Map<string, ZoneType>()
+function addSourcesAndLayers(map: mapboxgl.Map) {
+  map.addSource('boundary-source', { type: 'geojson', data: empty })
+  map.addLayer({ id: 'boundary-fill', type: 'fill', source: 'boundary-source', paint: { 'fill-color': '#2E86C1', 'fill-opacity': 0.06 } })
+  map.addLayer({ id: 'boundary-line', type: 'line', source: 'boundary-source', paint: { 'line-color': '#60A5FA', 'line-width': 2, 'line-dasharray': [2, 2] } })
 
-  recentActions.forEach((action) => {
-    const x = Math.max(0, Math.min(cols - 1, Math.floor((action.x / 64) * cols)))
-    const y = Math.max(0, Math.min(rows - 1, Math.floor((action.y / 64) * rows)))
-    actionZones.set(`${x}-${y}`, action.zone_type)
+  map.addSource('zones-source', { type: 'geojson', data: empty })
+  map.addLayer({ id: 'zones-fill', type: 'fill', source: 'zones-source', paint: { 'fill-color': ['coalesce', ['get', 'fill'], '#27AE60'], 'fill-opacity': 0.75 } })
+  map.addLayer({ id: 'zones-outline', type: 'line', source: 'zones-source', paint: { 'line-color': 'rgba(255,255,255,0.28)', 'line-width': 0.6 } })
+
+  map.addSource('roads-source', { type: 'geojson', data: empty })
+  map.addLayer({
+    id: 'roads-line',
+    type: 'line',
+    source: 'roads-source',
+    paint: {
+      'line-width': ['match', ['get', 'road_type'], 'HIGHWAY', 6, 'ARTERIAL', 4, 'COLLECTOR', 2.5, 1.5],
+      'line-color': ['interpolate', ['linear'], ['coalesce', ['get', 'congestion_pct'], 0], 0, '#27AE60', 50, '#F39C12', 75, '#E74C3C', 100, '#8E0000'],
+    },
   })
 
-  const cells = Array.from({ length: cols * rows }, (_, index) => {
-    const x = index % cols
-    const y = Math.floor(index / cols)
-    const zone = actionZones.get(`${x}-${y}`) ?? seededZoneForCell(x, y, cols, rows, selectedCity?.id)
-    return { x, y, zone }
+  map.addSource('buildings-source', { type: 'geojson', data: empty })
+  map.addLayer({
+    id: 'building-extrusion',
+    type: 'fill-extrusion',
+    source: 'buildings-source',
+    minzoom: 12,
+    paint: {
+      'fill-extrusion-color': ['coalesce', ['get', 'extrudeFill'], '#5AA8D8'],
+      'fill-extrusion-height': ['min', 400, ['*', ['coalesce', ['get', 'population_density'], 5000], 0.004]],
+      'fill-extrusion-base': 0,
+      'fill-extrusion-opacity': 0.85,
+    },
   })
 
-  const zoneCounts = cells.reduce<Record<string, number>>((counts, cell) => {
-    counts[cell.zone] = (counts[cell.zone] ?? 0) + 1
-    return counts
-  }, {})
-  const legendZones = Object.entries(zoneCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 7)
-
-  return (
-    <div className="flex-1 relative overflow-hidden bg-bg-primary">
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage:
-            'linear-gradient(#2d4a7a 1px, transparent 1px), linear-gradient(90deg, #2d4a7a 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-        }}
-      />
-
-      <div className="absolute inset-8 flex flex-col">
-        <div className="mb-4">
-          <div className="text-xs uppercase font-mono text-accent-cyan tracking-widest">
-            Local Planning Grid
-          </div>
-          <h2 className="text-2xl font-bold text-text-primary">
-            {selectedCity?.name ?? 'Selected City'}
-          </h2>
-          <p className="text-sm text-text-muted max-w-2xl">
-            Add a VITE_MAPBOX_TOKEN to enable the live Mapbox basemap. This local grid keeps the
-            planner usable without external map credentials.
-          </p>
-        </div>
-
-        <div
-          className="grid flex-1 min-h-0 border border-border-subtle bg-bg-secondary/70"
-          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-        >
-          {cells.map((cell) => (
-            <button
-              key={`${cell.x}-${cell.y}`}
-              type="button"
-              onClick={() => isPlacementMode && selectedZoneForPlacement && onPlace(cell.x, cell.y)}
-              className={`border border-border-subtle/50 transition ${
-                isPlacementMode
-                  ? 'hover:brightness-125 cursor-crosshair'
-                  : 'hover:brightness-110'
-              }`}
-              style={{
-                backgroundColor: ZONE_COLORS[cell.zone],
-                boxShadow: actionZones.has(`${cell.x}-${cell.y}`)
-                  ? 'inset 0 0 0 2px rgba(255,255,255,0.55)'
-                  : undefined,
-              }}
-              title={`${ZONE_LABELS[cell.zone]} (${cell.x}, ${cell.y})`}
-            >
-              {(cell.x === Math.floor(cols / 2) || cell.y === Math.floor(rows / 2)) && (
-                <span className="block w-full h-full bg-white/10" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-3 text-xs text-text-secondary">
-          {legendZones.map(([zone, count]) => (
-            <div key={zone} className="flex items-center gap-1.5">
-              <span
-                className="w-3 h-3 rounded-sm border border-white/20"
-                style={{ backgroundColor: ZONE_COLORS[zone as ZoneType] }}
-              />
-              <span>{ZONE_LABELS[zone as ZoneType]}</span>
-              <span className="text-text-muted font-mono">{count}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {isPlacementMode && selectedZoneForPlacement && (
-        <PlacementIndicator zone={selectedZoneForPlacement} />
-      )}
-    </div>
-  )
+  map.addSource('heatmap-source', { type: 'geojson', data: empty })
+  map.addLayer({
+    id: 'population-heatmap',
+    type: 'heatmap',
+    source: 'heatmap-source',
+    layout: { visibility: 'none' },
+    paint: {
+      'heatmap-weight': ['interpolate', ['linear'], ['coalesce', ['get', 'population_density'], 0], 0, 0, 80000, 1],
+      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 10, 15, 12, 30, 14, 50],
+      'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(255,255,178,0)', 0.3, '#FEE391', 0.55, '#FEC44F', 0.8, '#FB6A4A', 1, '#7F0000'],
+    },
+  })
 }
 
-function seededZoneForCell(
-  x: number,
-  y: number,
-  cols: number,
-  rows: number,
-  cityId = 'city'
-): ZoneType {
-  const cx = (cols - 1) / 2
-  const cy = (rows - 1) / 2
-  const dx = x - cx
-  const dy = y - cy
-  const distance = Math.sqrt(dx * dx + dy * dy)
-  const hash = cityId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  const noise = Math.abs(Math.sin((x + 1) * 12.9898 + (y + 1) * 78.233 + hash) * 43758.5453) % 1
-
-  if (x === Math.floor(cols / 2) || y === Math.floor(rows / 2)) return 'TRANS_HIGHWAY'
-  if (Math.abs(dx) <= 2 && Math.abs(dy) <= 2) return noise > 0.45 ? 'COM_OFFICE' : 'MIX_USE'
-  if ((x < 3 || x > cols - 4) && y > rows * 0.55) return noise > 0.35 ? 'IND_LIGHT' : 'INFRA_POWER'
-  if ((x + y + hash) % 17 === 0) return 'GREEN_PARK'
-  if ((x * 3 + y + hash) % 29 === 0) return 'EDU_SCHOOL'
-  if ((x + y * 5 + hash) % 37 === 0) return 'HEALTH_CLINIC'
-  if (distance < 6) return noise > 0.35 ? 'RES_HIGH' : 'RES_MED'
-  if (distance < 9) return noise > 0.2 ? 'RES_MED' : 'COM_RETAIL'
-  return noise > 0.15 ? 'RES_LOW' : 'GREEN_FOREST'
+function setVisibility(map: mapboxgl.Map, ids: string[], visible: boolean) {
+  ids.forEach((id) => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none')
+  })
 }
 
-function buildZoneColorExpression(): mapboxgl.Expression {
-  const expression: mapboxgl.Expression = ['match', ['get', 'zone_type']]
-  Object.entries(ZONE_COLORS).forEach(([zone, color]) => {
-    expression.push(zone, color)
-  })
-  expression.push('#1a2235')
-  return expression
+function withZonePaint(collection: GeoJSON.FeatureCollection): GeoJSON.FeatureCollection {
+  return {
+    ...collection,
+    features: collection.features.map((feature) => {
+      const props: any = feature.properties ?? {}
+      const zone = props.zone_type_id ?? props.zone_type ?? 'RES_LOW_DETACHED'
+      const fill = getZoneColor(zone)
+      return { ...feature, properties: { ...props, zone_type_id: zone, fill, extrudeFill: lightenHex(fill), population_density: props.population_density ?? props.population ?? 12000 } }
+    }),
+  }
+}
+
+function boundaryGeojson(city: any): GeoJSON.FeatureCollection {
+  const [west, south, east, north] = city.bbox
+  return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]] } }] }
+}
+
+function zoneCentroids(collection: GeoJSON.FeatureCollection): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: collection.features.map((feature) => {
+      const coords = (feature.geometry as any).coordinates?.[0] ?? []
+      const lng = coords.reduce((sum: number, c: number[]) => sum + c[0], 0) / Math.max(1, coords.length)
+      const lat = coords.reduce((sum: number, c: number[]) => sum + c[1], 0) / Math.max(1, coords.length)
+      return { type: 'Feature', properties: feature.properties, geometry: { type: 'Point', coordinates: [lng, lat] } }
+    }),
+  }
+}
+
+function makeInitialCityFrame(city: any) {
+  const [west, south, east, north] = city.bbox
+  const rows = 14
+  const cols = 18
+  const zones = ['RES_LOW_DETACHED', 'RES_MED_APARTMENT', 'COM_SMALL_SHOP', 'PARK_SMALL', 'BUS_STATION', 'EDU_HIGH', 'HEALTH_HOSPITAL']
+  const features: GeoJSON.Feature[] = []
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < cols; x += 1) {
+      if ((x + y) % 5 === 0 || (x > 6 && x < 12 && y > 4 && y < 10)) {
+        const x0 = west + ((east - west) * x) / cols
+        const x1 = west + ((east - west) * (x + 1)) / cols
+        const y0 = south + ((north - south) * y) / rows
+        const y1 = south + ((north - south) * (y + 1)) / rows
+        const zone = zones[(x * 3 + y * 5) % zones.length]
+        features.push({ type: 'Feature', properties: { zone_type_id: zone, population_density: 3000 + (x + y) * 900 }, geometry: { type: 'Polygon', coordinates: [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]] } })
+      }
+    }
+  }
+  const roads: GeoJSON.Feature[] = [
+    { type: 'Feature', properties: { road_type: 'HIGHWAY', congestion_pct: 62 }, geometry: { type: 'LineString', coordinates: [[west, (south + north) / 2], [east, (south + north) / 2]] } },
+    { type: 'Feature', properties: { road_type: 'ARTERIAL', congestion_pct: 38 }, geometry: { type: 'LineString', coordinates: [[(west + east) / 2, south], [(west + east) / 2, north]] } },
+  ]
+  return {
+    type: 'SIM_INIT' as const,
+    year: 0,
+    zones_geojson: { type: 'FeatureCollection' as const, features },
+    roads_geojson: { type: 'FeatureCollection' as const, features: roads },
+    metrics_snapshot: { year: 0, pop_total: city.population_current, pop_density_avg: 9000, pop_growth_rate: city.urban_growth_rate, mobility_commute: 42, mobility_congestion: 45, mobility_transit_coverage: 60, mobility_walkability: 58, econ_gdp_est: city.population_current * city.gdp_per_capita, econ_housing_afford: 54, econ_jobs_created: 0, env_green_ratio: 18, env_co2_est: 600, env_impervious: 52, env_flood_exposure: 18, equity_infra_gini: 34, equity_hosp_coverage: 71, equity_school_access: 78, infra_power_load: 61, infra_water_capacity: 68, safety_response_time: 7.5 },
+    agent_actions: [],
+  }
+}
+
+function flashNewZones(map: mapboxgl.Map, frame: any) {
+  if (!frame.agent_actions?.length) return
+  // Mapbox layer updates already animate visually via opacity; Phase 4 will add richer decision playback.
+  map.triggerRepaint()
+}
+
+function LocalMap({ city }: { city: string }) {
+  return <div style={{ height: '100%', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg, #101827, #0D1117)' }}><div className="glass-panel" style={{ padding: 24, borderRadius: 12 }}><strong>{city}</strong><p style={{ color: 'var(--color-text-secondary)' }}>Add VITE_MAPBOX_TOKEN to render the live satellite map.</p></div></div>
 }

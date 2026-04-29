@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Play, Pause, Square, Zap, Download, Settings, RefreshCw } from 'lucide-react'
+import { Building2, Play, Pause, Square, Zap, Download, Settings, RefreshCw } from 'lucide-react'
 import { useSimulationStore } from '@/stores/simulationStore'
 import { useCityStore } from '@/stores/cityStore'
 import { useScenarioStore, SCENARIOS } from '@/stores/scenarioStore'
@@ -29,7 +29,7 @@ export function TopBar({ ws }: TopBarProps) {
     <div className="flex items-center gap-4 px-4 py-2 bg-bg-secondary border-b border-border-subtle h-14 shrink-0">
       {/* Logo */}
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-xl">🏙️</span>
+        <Building2 size={22} className="text-accent-cyan" />
         <div>
           <div className="text-sm font-bold text-text-primary leading-none">UrbanMind AI</div>
           <div className="text-xs text-text-muted font-mono leading-none mt-0.5">
@@ -57,7 +57,8 @@ export function TopBar({ ws }: TopBarProps) {
             style={currentScenario === s.id ? { backgroundColor: s.color + '33', color: s.color } : {}}
             title={s.description}
           >
-            {s.icon} {s.name}
+            <span className="font-mono text-[10px] mr-1">{s.icon}</span>
+            {s.name}
           </button>
         ))}
       </div>

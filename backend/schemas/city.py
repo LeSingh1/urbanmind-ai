@@ -1,23 +1,24 @@
-from pydantic import BaseModel
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
 
 
-class CityListItem(BaseModel):
-    id: str
+class CityResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    slug: str
     name: str
     country: str
-    flag: str = ""
     center_lat: float
     center_lng: float
     default_zoom: int
-    population_current: int
-    key_planning_challenge: str
-
-
-class CityDetail(CityListItem):
-    bounds: dict
     climate_zone: str
-    gdp_per_capita: int
+    population_current: int
+    gdp_per_capita: float
     urban_growth_rate: float
-    expansion_constraint: str
-    historical_snapshots: list[dict]
-    initial_metrics: dict
+
+
+class CityDataResponse(CityResponse):
+    boundary_geojson: dict
+    profile: dict

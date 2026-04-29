@@ -3,19 +3,18 @@ from pydantic import BaseModel
 
 class StartSessionRequest(BaseModel):
     city_id: str
-    scenario: str = "BALANCED_SUSTAINABLE"
-    speed_multiplier: float = 1.0
+    scenario_id: str = "BALANCED_SUSTAINABLE"
 
 
 class StartSessionResponse(BaseModel):
     session_id: str
-    websocket_url: str
+    ws_url: str
 
 
 class OverrideRequest(BaseModel):
     x: int
     y: int
-    zone_type: str
+    zone_type_id: str
 
 
 class ScenarioChangeRequest(BaseModel):

@@ -2,44 +2,51 @@
   "id": "singapore",
   "name": "Singapore",
   "country": "Singapore",
-  "flag": "🇸🇬",
-  "center_lat": 1.3521,
-  "center_lng": 103.8198,
+  "center_lat": 1.35,
+  "center_lng": 103.82,
   "default_zoom": 12,
-  "bounds": {
-    "min_lat": 1.15,
-    "max_lat": 1.48,
-    "min_lng": 103.60,
-    "max_lng": 104.08
-  },
   "climate_zone": "Tropical rainforest",
-  "population_current": 5917600,
+  "population_current": 5920000,
   "gdp_per_capita": 65000,
-  "urban_growth_rate": 0.008,
-  "key_planning_challenge": "Finite land area requiring maximum vertical efficiency and smart energy",
-  "expansion_constraint": "Island geography, water security, land scarcity",
-  "historical_snapshots": [
-    {"year": 1950, "population": 1022000, "area_km2": 581, "key_event": "British colonial port"},
-    {"year": 1970, "population": 2074507, "area_km2": 581, "key_event": "HDB public housing program"},
-    {"year": 1990, "population": 3047100, "area_km2": 646, "key_event": "Changi Airport expansion"},
-    {"year": 2010, "population": 5076700, "area_km2": 710, "key_event": "Marina Bay Sands opening"},
-    {"year": 2024, "population": 5917600, "area_km2": 735, "key_event": "Long Island reclamation plans"}
+  "urban_growth_rate": 0.8,
+  "key_planning_challenge": "A compact island city-state must balance port, airport, housing, water resilience, and high-quality green networks.",
+  "expansion_constraint": "Island boundary, reclaimed coast, water catchments, strategic port and airport land",
+  "bbox": [
+    103.6,
+    1.15,
+    104.08,
+    1.48
   ],
-  "initial_metrics": {
-    "population": 5917600,
-    "gdp_per_capita": 65000,
-    "commute_minutes": 38,
-    "aqi": 48,
-    "green_ratio": 0.32,
-    "equity_score": 0.72,
-    "transit_coverage": 0.88,
-    "flood_risk": 0.25,
-    "infrastructure_score": 0.96,
-    "hospital_beds_per_1k": 2.4,
-    "school_enrollment": 0.99,
-    "employment_rate": 0.96,
-    "housing_affordability": 0.38,
-    "energy_per_capita": 9100,
-    "co2_per_capita": 8.1
-  }
+  "historical_snapshots": [
+    {
+      "year": 1950,
+      "population": 1022000,
+      "area_km2": 581,
+      "key_event": "Post-war port city faces housing and sanitation pressure"
+    },
+    {
+      "year": 1970,
+      "population": 2075000,
+      "area_km2": 581,
+      "key_event": "HDB new towns and industrial estates scale rapidly"
+    },
+    {
+      "year": 1990,
+      "population": 3047000,
+      "area_km2": 633,
+      "key_event": "MRT-led regional centers mature"
+    },
+    {
+      "year": 2010,
+      "population": 5076700,
+      "area_km2": 716,
+      "key_event": "Marina Bay and water resilience projects expand"
+    },
+    {
+      "year": 2024,
+      "population": 5920000,
+      "area_km2": 734,
+      "key_event": "Long-term land use plan balances density and liveability"
+    }
+  ]
 }

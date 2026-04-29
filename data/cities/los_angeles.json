@@ -2,44 +2,51 @@
   "id": "los_angeles",
   "name": "Los Angeles",
   "country": "United States",
-  "flag": "🇺🇸",
-  "center_lat": 34.0522,
-  "center_lng": -118.2437,
+  "center_lat": 34.05,
+  "center_lng": -118.24,
   "default_zoom": 10,
-  "bounds": {
-    "min_lat": 33.70,
-    "max_lat": 34.35,
-    "min_lng": -118.67,
-    "max_lng": -117.65
-  },
   "climate_zone": "Mediterranean",
-  "population_current": 3898747,
+  "population_current": 3900000,
   "gdp_per_capita": 72000,
-  "urban_growth_rate": 0.006,
-  "key_planning_challenge": "Car-centric sprawl requiring transit retrofit and wildfire buffers",
-  "expansion_constraint": "Wildfire risk, water scarcity, seismic zones, coastal floods",
-  "historical_snapshots": [
-    {"year": 1950, "population": 1970358, "area_km2": 1302, "key_event": "Freeway construction boom"},
-    {"year": 1970, "population": 2816061, "area_km2": 1302, "key_event": "Sprawl expansion peak"},
-    {"year": 1990, "population": 3485398, "area_km2": 1302, "key_event": "Northridge earthquake planning"},
-    {"year": 2010, "population": 3792621, "area_km2": 1302, "key_event": "Metro rail expansion begins"},
-    {"year": 2024, "population": 3898747, "area_km2": 1302, "key_event": "Transit-oriented development push"}
+  "urban_growth_rate": 0.6,
+  "key_planning_challenge": "Polycentric sprawl, housing shortage, wildfire risk, and car dependence require infill near transit and resilient green buffers.",
+  "expansion_constraint": "Mountains, wildfire zones, coastal constraints, freeway congestion",
+  "bbox": [
+    -118.67,
+    33.7,
+    -117.65,
+    34.35
   ],
-  "initial_metrics": {
-    "population": 3898747,
-    "gdp_per_capita": 72000,
-    "commute_minutes": 52,
-    "aqi": 88,
-    "green_ratio": 0.09,
-    "equity_score": 0.44,
-    "transit_coverage": 0.42,
-    "flood_risk": 0.22,
-    "infrastructure_score": 0.62,
-    "hospital_beds_per_1k": 2.8,
-    "school_enrollment": 0.87,
-    "employment_rate": 0.84,
-    "housing_affordability": 0.22,
-    "energy_per_capita": 8900,
-    "co2_per_capita": 7.2
-  }
+  "historical_snapshots": [
+    {
+      "year": 1950,
+      "population": 1970358,
+      "area_km2": 1214,
+      "key_event": "Post-war suburban boom and freeway expansion"
+    },
+    {
+      "year": 1970,
+      "population": 2811801,
+      "area_km2": 1214,
+      "key_event": "Automobile-oriented growth reshapes the basin"
+    },
+    {
+      "year": 1990,
+      "population": 3485398,
+      "area_km2": 1214,
+      "key_event": "Metro Rail opens as regional density rises"
+    },
+    {
+      "year": 2010,
+      "population": 3792621,
+      "area_km2": 1214,
+      "key_event": "Transit-oriented planning accelerates"
+    },
+    {
+      "year": 2024,
+      "population": 3900000,
+      "area_km2": 1214,
+      "key_event": "Housing element updates and climate adaptation planning expand"
+    }
+  ]
 }

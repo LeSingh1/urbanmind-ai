@@ -32,26 +32,23 @@ class SimulationManager:
         session_store.update(session_id, {"status": "running"})
 
         grid_size = 64
-        await websocket.send_json({
-            "type": "SIM_INIT",
-            "city_id": city_id,
-            "grid_size": grid_size,
-            "city_name": city_data.get("name", city_id),
-            "center": {
-                "lat": city_data.get("center_lat", 0),
-                "lng": city_data.get("center_lng", 0),
-            },
-            "bounds": city_data.get("bounds", {}),
-            "initial_metrics": city_data.get("initial_metrics", {}),
-        })
 
         try:
             from simulation.simulation_loop import SimulationLoop
             loop = SimulationLoop(city_data, scenario, grid_size)
+            await websocket.send_json(_build_init_message(
+                session_id, city_id, city_data, scenario, grid_size, loop.get_grid_as_cells()
+            ))
             await _run_with_engine(session_id, websocket, loop, speed)
         except Exception as e:
             logger.warning(f"AI engine unavailable ({e}), using heuristic fallback")
-            await _run_heuristic(session_id, websocket, city_data, scenario, grid_size, speed)
+            zone_grid = [["EMPTY"] * grid_size for _ in range(grid_size)]
+            _seed_initial_zones(zone_grid, grid_size, city_data)
+            await websocket.send_json(_build_init_message(
+                session_id, city_id, city_data, scenario, grid_size,
+                _zone_grid_to_cells(zone_grid, city_data, grid_size),
+            ))
+            await _run_heuristic(session_id, websocket, city_data, scenario, grid_size, speed, zone_grid)
 
 
 async def _run_with_engine(session_id, websocket, loop, speed):
@@ -73,7 +70,7 @@ async def _run_with_engine(session_id, websocket, loop, speed):
 
         session_store.update(session_id, {"current_year": frame["year"]})
         session_store.append_history(session_id, frame)
-        await websocket.send_json({"type": "SIM_FRAME", **frame})
+        await websocket.send_json({"type": "SIM_FRAME", "session_id": session_id, **frame})
         delay = max(0.05, 1.0 / speed)
         await asyncio.sleep(delay)
 
@@ -83,23 +80,23 @@ async def _run_with_engine(session_id, websocket, loop, speed):
     await websocket.send_json({"type": "SIM_COMPLETE", "final_metrics": final_metrics})
 
 
-async def _run_heuristic(session_id, websocket, city_data, scenario, grid_size, speed):
+async def _run_heuristic(session_id, websocket, city_data, scenario, grid_size, speed, zone_grid):
     import numpy as np
 
     metrics = dict(city_data.get("initial_metrics", {}))
     _fill_metrics(metrics)
 
-    zone_grid = [["EMPTY"] * grid_size for _ in range(grid_size)]
-    _seed_initial_zones(zone_grid, grid_size, city_data)
-
     scenario_cfg = _SCENARIO_WEIGHTS.get(scenario, _SCENARIO_WEIGHTS["BALANCED_SUSTAINABLE"])
 
     for year in range(1, 51):
+        grid_delta = []
         overrides = session_store.pop_overrides(session_id)
         for ov in overrides:
             ox, oy, zt = ov["x"], ov["y"], ov["zone_type"]
             if 0 <= ox < grid_size and 0 <= oy < grid_size:
+                old_zone = zone_grid[oy][ox]
                 zone_grid[oy][ox] = zt
+                grid_delta.append(_make_delta(ox, oy, old_zone, zt, city_data, grid_size))
 
         session = session_store.get(session_id)
         if not session or session.get("status") == "stopped":
@@ -110,24 +107,36 @@ async def _run_heuristic(session_id, websocket, city_data, scenario, grid_size, 
             for ov in overrides:
                 ox, oy, zt = ov["x"], ov["y"], ov["zone_type"]
                 if 0 <= ox < grid_size and 0 <= oy < grid_size:
+                    old_zone = zone_grid[oy][ox]
                     zone_grid[oy][ox] = zt
+                    grid_delta.append(_make_delta(ox, oy, old_zone, zt, city_data, grid_size))
             session = session_store.get(session_id)
 
-        actions = _place_zones_heuristic(zone_grid, grid_size, year, scenario_cfg)
+        actions, placed_delta = _place_zones_heuristic(zone_grid, grid_size, year, scenario_cfg, city_data)
+        grid_delta.extend(placed_delta)
         _update_metrics(metrics, actions, year, scenario_cfg)
 
         zones_geojson = _grid_to_geojson(zone_grid, city_data, grid_size)
+        primary_action = actions[0] if actions else {
+            "x": 0, "y": 0, "zone_type": "EMPTY", "lat": 0, "lng": 0,
+            "sps_score": 0, "reason": "No valid expansion frontier available.",
+        }
 
         frame = {
             "year": year,
+            "step": year,
+            "total_steps": 50,
             "zones_geojson": zones_geojson,
             "metrics": dict(metrics),
             "agent_actions": actions,
+            "grid_delta": grid_delta,
+            "action": primary_action,
+            "sps_score": primary_action.get("sps_score", 0),
         }
 
         session_store.update(session_id, {"current_year": year})
         session_store.append_history(session_id, frame)
-        await websocket.send_json({"type": "SIM_FRAME", **frame})
+        await websocket.send_json({"type": "SIM_FRAME", "session_id": session_id, **frame})
 
         delay = max(0.05, 1.0 / speed)
         await asyncio.sleep(delay)
@@ -154,34 +163,55 @@ _ZONE_SEQUENCE = [
 ]
 
 
-def _place_zones_heuristic(zone_grid, grid_size, year, scenario_cfg):
+def _place_zones_heuristic(zone_grid, grid_size, year, scenario_cfg, city_data):
     import random
     actions = []
+    grid_delta = []
     placements_per_year = min(3 + year // 5, 12)
-    placed = 0
 
     zone_probs = _get_zone_probabilities(scenario_cfg)
+    frontier = _get_frontier_cells(zone_grid, grid_size)
 
-    attempts = 0
-    while placed < placements_per_year and attempts < 200:
-        attempts += 1
-        x = random.randint(0, grid_size - 1)
-        y = random.randint(0, grid_size - 1)
-        if zone_grid[y][x] != "EMPTY":
-            continue
-        if not _has_neighbor(zone_grid, x, y, grid_size):
-            continue
-
+    while len(actions) < placements_per_year and frontier:
         zone_type = random.choices(list(zone_probs.keys()), weights=list(zone_probs.values()))[0]
-        if not _check_constraints(zone_grid, x, y, zone_type, grid_size):
+        candidates = []
+        for x, y in frontier:
+            if not _check_constraints(zone_grid, x, y, zone_type, grid_size):
+                continue
+            candidates.append((_compute_sps(zone_grid, x, y, zone_type, grid_size), x, y))
+        if not candidates:
+            frontier = frontier[1:]
             continue
-
-        sps = _compute_sps(zone_grid, x, y, zone_type, grid_size)
+        candidates.sort(reverse=True)
+        sps, x, y = random.choice(candidates[: min(8, len(candidates))])
+        old_zone = zone_grid[y][x]
         zone_grid[y][x] = zone_type
-        actions.append({"x": x, "y": y, "zone_type": zone_type, "sps": round(sps, 2)})
-        placed += 1
+        lat, lng = _cell_lat_lng(city_data, grid_size, x, y)
+        actions.append({
+            "x": x,
+            "y": y,
+            "zone_type": zone_type,
+            "lat": lat,
+            "lng": lng,
+            "sps": round(sps, 2),
+            "sps_score": round(sps, 2),
+            "reason": _planning_reason(zone_grid, x, y, zone_type),
+        })
+        grid_delta.append(_make_delta(x, y, old_zone, zone_type, city_data, grid_size))
+        frontier = _get_frontier_cells(zone_grid, grid_size)
 
-    return actions
+    return actions, grid_delta
+
+
+def _get_frontier_cells(zone_grid, grid_size):
+    cells = []
+    for y in range(grid_size):
+        for x in range(grid_size):
+            if zone_grid[y][x] == "EMPTY" and _has_neighbor(zone_grid, x, y, grid_size):
+                cells.append((x, y))
+    center = (grid_size - 1) / 2
+    cells.sort(key=lambda cell: ((cell[0] - center) ** 2 + (cell[1] - center) ** 2) ** 0.5)
+    return cells
 
 
 def _get_zone_probabilities(scenario_cfg):
@@ -243,6 +273,27 @@ def _compute_sps(zone_grid, x, y, zone_type, grid_size):
     return min(10.0, max(0.0, score))
 
 
+def _planning_reason(zone_grid, x, y, zone_type):
+    neighbors = []
+    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        nx, ny = x + dx, y + dy
+        if 0 <= ny < len(zone_grid) and 0 <= nx < len(zone_grid[ny]):
+            neighbor = zone_grid[ny][nx]
+            if neighbor != "EMPTY":
+                neighbors.append(neighbor)
+    if zone_type.startswith("RES"):
+        return "Extends housing from the existing urban edge while keeping the growth contiguous."
+    if zone_type.startswith("COM") or zone_type == "MIX_USE":
+        return "Adds jobs and services beside already developed parcels to reduce isolated sprawl."
+    if zone_type.startswith("GREEN"):
+        return "Reserves open space inside the growth frontier before the surrounding land fills in."
+    if zone_type.startswith("TRANS") or zone_type.startswith("INFRA"):
+        return "Adds infrastructure near active development so future parcels can connect efficiently."
+    if zone_type.startswith("HEALTH") or zone_type.startswith("EDU") or zone_type.startswith("SAFETY"):
+        return "Places civic infrastructure next to growing neighborhoods to improve access."
+    return f"Expands from nearby {', '.join(neighbors[:2]) or 'developed'} parcels."
+
+
 def _update_metrics(metrics, actions, year, scenario_cfg):
     n = len(actions)
     zone_types = [a["zone_type"] for a in actions]
@@ -286,6 +337,92 @@ def _seed_initial_zones(zone_grid, grid_size, city_data):
             zone_grid[y][x] = zone
 
 
+def _build_init_message(session_id, city_id, city_data, scenario, grid_size, grid):
+    return {
+        "type": "SIM_INIT",
+        "session_id": session_id,
+        "city_id": city_id,
+        "scenario": scenario,
+        "grid_size": grid_size,
+        "city_name": city_data.get("name", city_id),
+        "center": {
+            "lat": city_data.get("center_lat", 0),
+            "lng": city_data.get("center_lng", 0),
+        },
+        "bounds": city_data.get("bounds", {}),
+        "grid": grid,
+        "initial_metrics": city_data.get("initial_metrics", {}),
+        "total_steps": 50,
+        "config": {
+            "grid_size": {"rows": grid_size, "cols": grid_size},
+            "cell_size_m": 500,
+            "years_per_step": 1,
+            "steps_per_year": 1,
+            "speed_multiplier": 1,
+        },
+    }
+
+
+def _zone_grid_to_cells(zone_grid, city_data, grid_size):
+    cells = []
+    for y in range(grid_size):
+        row = []
+        for x in range(grid_size):
+            lat, lng = _cell_lat_lng(city_data, grid_size, x, y)
+            zone = zone_grid[y][x]
+            row.append({
+                "x": x,
+                "y": y,
+                "zone_type": zone,
+                "elevation": 0,
+                "flood_risk": _estimated_flood_risk(city_data, grid_size, x, y),
+                "population": _estimated_population(zone),
+                "lat": lat,
+                "lng": lng,
+            })
+        cells.append(row)
+    return cells
+
+
+def _estimated_population(zone):
+    return {
+        "RES_LOW": 180,
+        "RES_MED": 520,
+        "RES_HIGH": 1400,
+        "MIX_USE": 900,
+    }.get(zone, 0)
+
+
+def _estimated_flood_risk(city_data, grid_size, x, y):
+    base = city_data.get("initial_metrics", {}).get("flood_risk_score", 2)
+    base = base * 10 if base <= 1 else base
+    edge_factor = abs(y - (grid_size / 2)) / (grid_size / 2)
+    return round(max(0, min(10, base * 0.55 + edge_factor * 3)), 1)
+
+
+def _cell_lat_lng(city_data, grid_size, x, y):
+    bounds = city_data.get("bounds", {})
+    min_lng = bounds.get("min_lng", city_data.get("center_lng", 0) - 0.3)
+    max_lng = bounds.get("max_lng", city_data.get("center_lng", 0) + 0.3)
+    min_lat = bounds.get("min_lat", city_data.get("center_lat", 0) - 0.3)
+    max_lat = bounds.get("max_lat", city_data.get("center_lat", 0) + 0.3)
+    lng_step = (max_lng - min_lng) / grid_size
+    lat_step = (max_lat - min_lat) / grid_size
+    return max_lat - (y + 0.5) * lat_step, min_lng + (x + 0.5) * lng_step
+
+
+def _make_delta(x, y, old_zone, new_zone, city_data, grid_size):
+    lat, lng = _cell_lat_lng(city_data, grid_size, x, y)
+    return {
+        "x": x,
+        "y": y,
+        "old_zone": old_zone,
+        "new_zone": new_zone,
+        "lat": lat,
+        "lng": lng,
+    }
+
+
 def _grid_to_geojson(zone_grid, city_data, grid_size):
     bounds = city_data.get("bounds", {})
     min_lng = bounds.get("min_lng", city_data.get("center_lng", 0) - 0.3)
@@ -303,7 +440,7 @@ def _grid_to_geojson(zone_grid, city_data, grid_size):
             if zone == "EMPTY":
                 continue
             lng = min_lng + x * lng_step
-            lat = min_lat + y * lat_step
+            lat = max_lat - (y + 1) * lat_step
             features.append({
                 "type": "Feature",
                 "geometry": {

@@ -1,102 +1,78 @@
-import type { ZoneType } from '@/types/city.types'
-
-export const ZONE_COLORS: Record<ZoneType, string> = {
-  RES_LOW: '#22c55e',
-  RES_MED: '#16a34a',
-  RES_HIGH: '#15803d',
-  COM_RETAIL: '#3b82f6',
-  COM_OFFICE: '#1d4ed8',
-  IND_LIGHT: '#f59e0b',
-  IND_HEAVY: '#d97706',
-  MIX_USE: '#8b5cf6',
-  GREEN_PARK: '#4ade80',
-  GREEN_FOREST: '#166534',
-  HEALTH_CLINIC: '#ec4899',
-  HEALTH_HOSP: '#db2777',
-  EDU_SCHOOL: '#06b6d4',
-  EDU_UNIVERSITY: '#0891b2',
-  INFRA_POWER: '#94a3b8',
-  INFRA_WATER: '#7dd3fc',
-  TRANS_HUB: '#f97316',
-  TRANS_HIGHWAY: '#ea580c',
-  SAFETY_FIRE: '#ef4444',
-  SAFETY_POLICE: '#dc2626',
-  EMPTY: '#1a2235',
+const tokenHex: Record<string, string> = {
+  '--zone-res-low': '#F5CBA7',
+  '--zone-res-med': '#E59866',
+  '--zone-res-high': '#CA6F1E',
+  '--zone-industrial': '#5D6D7E',
+  '--zone-commercial': '#2E86C1',
+  '--zone-mixed-use': '#A9DFBF',
+  '--zone-green': '#27AE60',
+  '--zone-forest': '#1E8449',
+  '--zone-transit': '#8E44AD',
+  '--zone-health': '#E74C3C',
+  '--zone-education': '#F9E79F',
+  '--zone-utility': '#7D6608',
+  '--zone-government': '#5D4E75',
+  '--zone-culture': '#D4AC0D',
+  '--zone-disaster': '#E67E22',
+  '--zone-smart': '#00BCD4',
+  '--zone-waterfront': '#1A6B8A',
+  '--zone-landmark': '#C0392B',
+  '--zone-office': '#2980B9',
+  '--zone-food': '#27AE60',
 }
 
-export const ZONE_LABELS: Record<ZoneType, string> = {
-  RES_LOW: 'Residential Low',
-  RES_MED: 'Residential Medium',
-  RES_HIGH: 'Residential High',
-  COM_RETAIL: 'Commercial Retail',
-  COM_OFFICE: 'Commercial Office',
-  IND_LIGHT: 'Light Industrial',
-  IND_HEAVY: 'Heavy Industrial',
-  MIX_USE: 'Mixed Use',
-  GREEN_PARK: 'Park',
-  GREEN_FOREST: 'Forest',
-  HEALTH_CLINIC: 'Health Clinic',
-  HEALTH_HOSP: 'Hospital',
-  EDU_SCHOOL: 'School',
-  EDU_UNIVERSITY: 'University',
-  INFRA_POWER: 'Power Plant',
-  INFRA_WATER: 'Water Facility',
-  TRANS_HUB: 'Transit Hub',
-  TRANS_HIGHWAY: 'Highway',
-  SAFETY_FIRE: 'Fire Station',
-  SAFETY_POLICE: 'Police Station',
-  EMPTY: 'Empty',
+export function getZoneToken(zoneTypeId = ''): string {
+  if (zoneTypeId.startsWith('RES_LOW')) return '--zone-res-low'
+  if (zoneTypeId.startsWith('RES_MED') || zoneTypeId.includes('APARTMENT')) return '--zone-res-med'
+  if (zoneTypeId.startsWith('RES_HIGH') || zoneTypeId.includes('TOWER')) return '--zone-res-high'
+  if (zoneTypeId.startsWith('IND_') || zoneTypeId.startsWith('MAINT_')) return '--zone-industrial'
+  if (zoneTypeId.startsWith('COM_')) return '--zone-commercial'
+  if (zoneTypeId.includes('MIXED')) return '--zone-mixed-use'
+  if (zoneTypeId.startsWith('PARK_') || zoneTypeId.startsWith('ENV_TREE') || zoneTypeId.includes('GREEN_BELT')) return '--zone-green'
+  if (zoneTypeId.includes('FOREST') || zoneTypeId.includes('NATURE')) return '--zone-forest'
+  if (zoneTypeId.includes('BUS') || zoneTypeId.includes('METRO') || zoneTypeId.includes('TRAIN') || zoneTypeId.includes('TRANSIT') || zoneTypeId.includes('TRAM')) return '--zone-transit'
+  if (zoneTypeId.startsWith('HEALTH_')) return '--zone-health'
+  if (zoneTypeId.startsWith('EDU_')) return '--zone-education'
+  if (zoneTypeId.includes('POWER') || zoneTypeId.includes('WATER') || zoneTypeId.includes('SUBSTATION') || zoneTypeId.includes('GRID')) return '--zone-utility'
+  if (zoneTypeId.startsWith('GOV_') || zoneTypeId.includes('COURT') || zoneTypeId.includes('POLICE')) return '--zone-government'
+  if (zoneTypeId.startsWith('CULT_') || zoneTypeId.startsWith('ENT_') || zoneTypeId.startsWith('SPORT_')) return '--zone-culture'
+  if (zoneTypeId.startsWith('DIS_') || zoneTypeId.includes('FIRE')) return '--zone-disaster'
+  if (zoneTypeId.startsWith('SMART_') || zoneTypeId.includes('DATA')) return '--zone-smart'
+  if (zoneTypeId.startsWith('WATER_') || zoneTypeId.includes('HARBOR') || zoneTypeId.includes('FERRY')) return '--zone-waterfront'
+  if (zoneTypeId.startsWith('LAND_')) return '--zone-landmark'
+  if (zoneTypeId.startsWith('OFF_')) return '--zone-office'
+  if (zoneTypeId.startsWith('FOOD_')) return '--zone-food'
+  return '--zone-green'
 }
 
-export const ZONE_ICONS: Record<ZoneType, string> = {
-  RES_LOW: '🏡',
-  RES_MED: '🏘️',
-  RES_HIGH: '🏢',
-  COM_RETAIL: '🏪',
-  COM_OFFICE: '🏦',
-  IND_LIGHT: '🏭',
-  IND_HEAVY: '⚙️',
-  MIX_USE: '🏬',
-  GREEN_PARK: '🌳',
-  GREEN_FOREST: '🌲',
-  HEALTH_CLINIC: '🏥',
-  HEALTH_HOSP: '🏥',
-  EDU_SCHOOL: '🏫',
-  EDU_UNIVERSITY: '🎓',
-  INFRA_POWER: '⚡',
-  INFRA_WATER: '💧',
-  TRANS_HUB: '🚉',
-  TRANS_HIGHWAY: '🛣️',
-  SAFETY_FIRE: '🚒',
-  SAFETY_POLICE: '🚓',
-  EMPTY: '⬜',
+export function getZoneColor(zoneTypeId = ''): string {
+  return tokenHex[getZoneToken(zoneTypeId)] ?? '#27AE60'
 }
 
-export function getZoneColor(zoneType: ZoneType, opacity = 1): string {
-  const hex = ZONE_COLORS[zoneType] ?? '#1a2235'
-  if (opacity === 1) return hex
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `rgba(${r},${g},${b},${opacity})`
+export function lightenHex(hex: string, amount = 0.3): string {
+  const value = hex.replace('#', '')
+  const r = parseInt(value.slice(0, 2), 16)
+  const g = parseInt(value.slice(2, 4), 16)
+  const b = parseInt(value.slice(4, 6), 16)
+  const mix = (channel: number) => Math.round(channel + (255 - channel) * amount)
+  return `#${[mix(r), mix(g), mix(b)].map((n) => n.toString(16).padStart(2, '0')).join('')}`
 }
 
-export function metricToColor(value: number, min: number, max: number, colorScale: 'green' | 'red' | 'blue' = 'green'): string {
-  const normalized = Math.max(0, Math.min(1, (value - min) / (max - min)))
-  if (colorScale === 'green') {
-    const r = Math.round(239 - normalized * 219)
-    const g = Math.round(68 + normalized * 113)
-    const b = Math.round(68 - normalized * 44)
-    return `rgb(${r},${g},${b})`
-  }
-  if (colorScale === 'red') {
-    const r = Math.round(68 + normalized * 171)
-    const g = Math.round(181 - normalized * 171)
-    const b = Math.round(68 - normalized * 44)
-    return `rgb(${r},${g},${b})`
-  }
-  const r = Math.round(7 + normalized * 14)
-  const g = Math.round(89 + normalized * 93)
-  const b = Math.round(133 + normalized * 79)
-  return `rgb(${r},${g},${b})`
+export function zoneColorExpression(): unknown[] {
+  const pairs = Object.entries({
+    RES_LOW_DETACHED: getZoneColor('RES_LOW_DETACHED'),
+    RES_MED_APARTMENT: getZoneColor('RES_MED_APARTMENT'),
+    RES_HIGH_TOWER: getZoneColor('RES_HIGH_TOWER'),
+    RES_AFFORDABLE: getZoneColor('RES_AFFORDABLE'),
+    COM_SMALL_SHOP: getZoneColor('COM_SMALL_SHOP'),
+    COM_OFFICE_PLAZA: getZoneColor('COM_OFFICE_PLAZA'),
+    IND_WAREHOUSE: getZoneColor('IND_WAREHOUSE'),
+    PARK_SMALL: getZoneColor('PARK_SMALL'),
+    BUS_STATION: getZoneColor('BUS_STATION'),
+    HEALTH_HOSPITAL: getZoneColor('HEALTH_HOSPITAL'),
+    EDU_HIGH: getZoneColor('EDU_HIGH'),
+    SOLAR_FARM: getZoneColor('SOLAR_FARM'),
+    SMART_TRAFFIC_LIGHT: getZoneColor('SMART_TRAFFIC_LIGHT'),
+  }).flat()
+  return ['match', ['get', 'zone_type_id'], ...pairs, ['get', 'fill']]
 }

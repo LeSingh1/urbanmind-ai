@@ -2,44 +2,51 @@
   "id": "london",
   "name": "London",
   "country": "United Kingdom",
-  "flag": "🇬🇧",
-  "center_lat": 51.5074,
-  "center_lng": -0.1278,
+  "center_lat": 51.51,
+  "center_lng": -0.12,
   "default_zoom": 11,
-  "bounds": {
-    "min_lat": 51.28,
-    "max_lat": 51.70,
-    "min_lng": -0.52,
-    "max_lng": 0.33
-  },
   "climate_zone": "Oceanic",
-  "population_current": 9648110,
+  "population_current": 9650000,
   "gdp_per_capita": 58000,
-  "urban_growth_rate": 0.009,
-  "key_planning_challenge": "Green Belt preservation and flood resilience",
-  "expansion_constraint": "Green Belt, Thames flood risk, heritage zones",
-  "historical_snapshots": [
-    {"year": 1950, "population": 8348000, "area_km2": 1572, "key_event": "Post-Blitz reconstruction"},
-    {"year": 1970, "population": 7448000, "area_km2": 1572, "key_event": "Deindustrialisation"},
-    {"year": 1990, "population": 6829000, "area_km2": 1572, "key_event": "Canary Wharf development"},
-    {"year": 2010, "population": 8174000, "area_km2": 1572, "key_event": "Olympic Park catalyst"},
-    {"year": 2024, "population": 9648110, "area_km2": 1572, "key_event": "Housing crisis response"}
+  "urban_growth_rate": 0.9,
+  "key_planning_challenge": "Green Belt constraints, housing affordability, heritage, and climate adaptation push growth toward brownfield and transit-rich sites.",
+  "expansion_constraint": "Green Belt, Thames floodplain, heritage districts, borough planning limits",
+  "bbox": [
+    -0.52,
+    51.28,
+    0.33,
+    51.7
   ],
-  "initial_metrics": {
-    "population": 9648110,
-    "gdp_per_capita": 58000,
-    "commute_minutes": 42,
-    "aqi": 55,
-    "green_ratio": 0.22,
-    "equity_score": 0.58,
-    "transit_coverage": 0.82,
-    "flood_risk": 0.30,
-    "infrastructure_score": 0.80,
-    "hospital_beds_per_1k": 2.5,
-    "school_enrollment": 0.94,
-    "employment_rate": 0.89,
-    "housing_affordability": 0.25,
-    "energy_per_capita": 5200,
-    "co2_per_capita": 3.2
-  }
+  "historical_snapshots": [
+    {
+      "year": 1950,
+      "population": 8197000,
+      "area_km2": 1572,
+      "key_event": "Post-war rebuilding and New Town policy reduce central crowding"
+    },
+    {
+      "year": 1970,
+      "population": 7368000,
+      "area_km2": 1572,
+      "key_event": "Deindustrialization and suburban relocation continue"
+    },
+    {
+      "year": 1990,
+      "population": 6800000,
+      "area_km2": 1572,
+      "key_event": "Docklands redevelopment shifts growth eastward"
+    },
+    {
+      "year": 2010,
+      "population": 8174100,
+      "area_km2": 1572,
+      "key_event": "Olympic regeneration and Crossrail planning reshape corridors"
+    },
+    {
+      "year": 2024,
+      "population": 9650000,
+      "area_km2": 1572,
+      "key_event": "Brownfield densification and climate resilience intensify"
+    }
+  ]
 }
