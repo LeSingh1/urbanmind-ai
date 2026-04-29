@@ -1,5 +1,6 @@
-import mapboxgl from 'mapbox-gl'
-import { Plus, Minus, RotateCcw, Layers } from 'lucide-react'
+import { useState } from 'react'
+import maplibregl from 'maplibre-gl'
+import { Plus, Minus, RotateCcw, Layers, Grid } from 'lucide-react'
 import { useUIStore } from '@/stores/uiStore'
 
 const LAYER_OPTIONS = [
@@ -11,11 +12,11 @@ const LAYER_OPTIONS = [
 ] as const
 
 interface MapControlsProps {
-  map: mapboxgl.Map
+  map: maplibregl.Map
 }
 
 export function MapControls({ map }: MapControlsProps) {
-  const { activeMapLayer, setActiveMapLayer } = useUIStore()
+  const { activeMapLayer, setActiveMapLayer, detailedGrid, setDetailedGrid } = useUIStore()
   const [showLayers, setShowLayers] = useState(false)
 
   return (
@@ -36,12 +37,21 @@ export function MapControls({ map }: MapControlsProps) {
         </button>
       </div>
 
-      {/* Reset */}
+      {/* Reset north */}
       <button
         onClick={() => map.resetNorth()}
         className="p-2 bg-bg-card border border-border-subtle rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-all"
       >
         <RotateCcw size={14} />
+      </button>
+
+      {/* Detail Grid toggle */}
+      <button
+        onClick={() => setDetailedGrid(!detailedGrid)}
+        title={detailedGrid ? 'Showing full grid — click for key areas only' : 'Showing key areas only — click for full grid'}
+        className={`p-2 border rounded-lg transition-all ${detailedGrid ? 'border-accent-blue text-accent-blue bg-accent-blue/10' : 'border-border-subtle text-text-secondary hover:text-text-primary hover:bg-bg-secondary'}`}
+      >
+        <Grid size={14} />
       </button>
 
       {/* Layer selector */}
@@ -73,6 +83,3 @@ export function MapControls({ map }: MapControlsProps) {
     </div>
   )
 }
-
-// Need useState import
-import { useState } from 'react'

@@ -7,9 +7,20 @@ import { getZoneColor, lightenHex } from '@/utils/colorUtils'
 import { ExplanationTooltip } from './ExplanationTooltip'
 import { MiniMetricsPanel } from './MiniMetricsPanel'
 import { SplitScreenView } from '@/components/Layout/SplitScreenView'
+import type { Landmark } from '@/types/city.types'
 
 const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
 const OPENFREEMAP_STYLE = import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/liberty'
+
+// Fallback tile size only used if a landmark has no w_deg/h_deg
+const KEY_TILE_DEG_W = 0.006
+const KEY_TILE_DEG_H = 0.005
+
+function landmarkBox(lm: Landmark): [number, number, number, number] {
+  const hw = (lm.w_deg ?? KEY_TILE_DEG_W) / 2
+  const hh = (lm.h_deg ?? (lm.w_deg ?? KEY_TILE_DEG_W) * 0.75) / 2
+  return [lm.lng - hw, lm.lat - hh, lm.lng + hw, lm.lat + hh]
+}
 
 export function MapContainer() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -21,12 +32,30 @@ export function MapContainer() {
   const activeLayers = useUIStore((state) => state.activeLayers)
   const selectedOverrideZone = useUIStore((state) => state.selectedOverrideZone)
   const isSplitScreen = useUIStore((state) => state.isSplitScreen)
+  const detailedGrid = useUIStore((state) => state.detailedGrid)
 
   const fallbackFrame = useMemo(() => city ? makeInitialCityFrame(city) : null, [city])
   const visibleFrame = frame ?? fallbackFrame
 
+  // Filter zones based on detailedGrid mode
+  const filteredFrame = useMemo(() => {
+    if (!visibleFrame) return null
+    if (detailedGrid) return visibleFrame
+    return {
+      ...visibleFrame,
+      zones_geojson: {
+        ...visibleFrame.zones_geojson,
+        features: visibleFrame.zones_geojson.features.filter(
+          (f: GeoJSON.Feature) => (f.properties as any)?.isKeyInfrastructure === true
+        ),
+      },
+    }
+  }, [visibleFrame, detailedGrid])
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
+    const [west, south, east, north] = city?.bbox ?? [-180, -85, 180, 85]
+    const pad = 0.04
     mapRef.current = new maplibregl.Map({
       container: containerRef.current,
       style: OPENFREEMAP_STYLE,
@@ -34,6 +63,7 @@ export function MapContainer() {
       zoom: city?.default_zoom ?? 10,
       pitch: 45,
       bearing: 0,
+      maxBounds: [[west - pad, south - pad], [east + pad, north + pad]],
     })
     mapRef.current.on('load', () => {
       addSourcesAndLayers(mapRef.current!)
@@ -45,20 +75,24 @@ export function MapContainer() {
     }
   }, [])
 
+  // Update maxBounds when city changes
   useEffect(() => {
     if (!mapRef.current || !loaded || !city) return
+    const [west, south, east, north] = city.bbox
+    const pad = 0.04
+    mapRef.current.setMaxBounds([[west - pad, south - pad], [east + pad, north + pad]])
     mapRef.current.flyTo({ center: [city.center_lng, city.center_lat], zoom: city.default_zoom, pitch: activeLayers.has('3D Buildings') ? 45 : 0, duration: 2000 })
     setSource('boundary-source', boundaryGeojson(city))
   }, [activeLayers, city, loaded])
 
   useEffect(() => {
-    if (!mapRef.current || !loaded || !visibleFrame) return
-    setSource('zones-source', withZonePaint(visibleFrame.zones_geojson))
-    setSource('roads-source', visibleFrame.roads_geojson)
-    setSource('buildings-source', withZonePaint(visibleFrame.zones_geojson))
-    setSource('heatmap-source', zoneCentroids(visibleFrame.zones_geojson))
-    flashNewZones(mapRef.current, visibleFrame)
-  }, [loaded, visibleFrame])
+    if (!mapRef.current || !loaded || !filteredFrame) return
+    setSource('zones-source', withZonePaint(filteredFrame.zones_geojson))
+    setSource('roads-source', filteredFrame.roads_geojson)
+    setSource('buildings-source', withZonePaint(filteredFrame.zones_geojson))
+    setSource('heatmap-source', zoneCentroids(filteredFrame.zones_geojson))
+    flashNewZones(mapRef.current, filteredFrame)
+  }, [loaded, filteredFrame])
 
   useEffect(() => {
     if (!mapRef.current || !loaded) return
@@ -113,7 +147,15 @@ function addSourcesAndLayers(map: maplibregl.Map) {
 
   map.addSource('zones-source', { type: 'geojson', data: empty })
   map.addLayer({ id: 'zones-fill', type: 'fill', source: 'zones-source', paint: { 'fill-color': ['coalesce', ['get', 'fill'], '#27AE60'], 'fill-opacity': ['coalesce', ['get', 'fillOpacity'], 0.46] } })
-  map.addLayer({ id: 'zones-outline', type: 'line', source: 'zones-source', paint: { 'line-color': 'rgba(13,17,23,0.42)', 'line-width': 0.35 } })
+  map.addLayer({
+    id: 'zones-outline',
+    type: 'line',
+    source: 'zones-source',
+    paint: {
+      'line-color': ['case', ['==', ['get', 'isKeyInfrastructure'], true], 'rgba(255,255,255,0.85)', 'rgba(13,17,23,0.4)'],
+      'line-width': ['case', ['==', ['get', 'isKeyInfrastructure'], true], 2.5, 0.5],
+    },
+  })
 
   map.addSource('roads-source', { type: 'geojson', data: empty })
   map.addLayer({
@@ -167,7 +209,20 @@ function withZonePaint(collection: GeoJSON.FeatureCollection): GeoJSON.FeatureCo
       const props: any = feature.properties ?? {}
       const zone = props.zone_type_id ?? props.zone_type ?? 'RES_LOW_DETACHED'
       const fill = getZoneColor(zone)
-      return { ...feature, properties: { ...props, zone_type_id: zone, fill, fillOpacity: props.fillOpacity ?? 0.46, extrudeFill: lightenHex(fill), population_density: props.population_density ?? props.population ?? 12000 } }
+      const isKey = props.isKeyInfrastructure === true
+      const isNew = props.isNewlyAdded === true
+      const opacity = isNew ? 0.92 : isKey ? 0.88 : 0.36
+      return {
+        ...feature,
+        properties: {
+          ...props,
+          zone_type_id: zone,
+          fill,
+          fillOpacity: props.fillOpacity ?? opacity,
+          extrudeFill: lightenHex(fill),
+          population_density: props.population_density ?? props.population ?? 12000,
+        },
+      }
     }),
   }
 }
@@ -190,53 +245,87 @@ function zoneCentroids(collection: GeoJSON.FeatureCollection): GeoJSON.FeatureCo
 }
 
 function makeInitialCityFrame(city: any) {
+  const landmarks: Landmark[] = city.landmarks ?? []
+  const keyFeatures: GeoJSON.Feature[] = landmarks.map((lm, i) => {
+    const [w, s, e, n] = landmarkBox(lm)
+    return {
+      type: 'Feature',
+      properties: {
+        x: i,
+        y: 0,
+        zone_type_id: lm.zone_type_id,
+        building_name: lm.name,
+        category: lm.category,
+        data_source: lm.data_source,
+        isKeyInfrastructure: true,
+        fillOpacity: 0.88,
+        population_density: populationForZone(lm.zone_type_id, city),
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]],
+      },
+    }
+  })
+
+  // Detailed grid: 120×100 fine tiles across the city bbox
   const [west, south, east, north] = city.bbox
-  const rows = 58
-  const cols = 74
+  const rows = 100
+  const cols = 120
+  const detailFeatures: GeoJSON.Feature[] = []
   const zones = ['RES_LOW_DETACHED', 'RES_MED_APARTMENT', 'RES_HIGH_TOWER', 'COM_SMALL_SHOP', 'COM_OFFICE_PLAZA', 'PARK_SMALL', 'BUS_STATION', 'EDU_HIGH', 'HEALTH_HOSPITAL', 'SMART_TRAFFIC_LIGHT']
-  const features: GeoJSON.Feature[] = []
-  for (let y = 0; y < rows; y += 1) {
-    for (let x = 0; x < cols; x += 1) {
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
       const lng = west + ((east - west) * (x + 0.5)) / cols
       const lat = south + ((north - south) * (y + 0.5)) / rows
       if (!isDevelopableCell(city.id, lng, lat, x, y, cols, rows)) continue
-
       const cellW = (east - west) / cols
       const cellH = (north - south) / rows
-      const insetX = cellW * 0.09
-      const insetY = cellH * 0.09
+      const insetX = cellW * 0.06
+      const insetY = cellH * 0.06
       const x0 = west + ((east - west) * x) / cols + insetX
       const x1 = west + ((east - west) * (x + 1)) / cols - insetX
       const y0 = south + ((north - south) * y) / rows + insetY
       const y1 = south + ((north - south) * (y + 1)) / rows - insetY
       const core = distanceToCore(city, lng, lat)
       const zone = zoneForCell(zones, x, y, core)
-      features.push({
+      detailFeatures.push({
         type: 'Feature',
         properties: {
           x,
           y,
           zone_type_id: zone,
-          fillOpacity: 0.42,
+          data_source: 'estimated',
+          isKeyInfrastructure: false,
+          fillOpacity: 0.36,
           population_density: Math.round(2600 + (1 - core) * 32000 + ((x * 17 + y * 11) % 2400)),
         },
         geometry: { type: 'Polygon', coordinates: [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]] },
       })
     }
   }
-  const roads: GeoJSON.Feature[] = [
-    { type: 'Feature', properties: { road_type: 'HIGHWAY', congestion_pct: 62 }, geometry: { type: 'LineString', coordinates: [[west + (east - west) * 0.1, south + (north - south) * 0.55], [east - (east - west) * 0.08, south + (north - south) * 0.55]] } },
-    { type: 'Feature', properties: { road_type: 'ARTERIAL', congestion_pct: 38 }, geometry: { type: 'LineString', coordinates: [[west + (east - west) * 0.52, south + (north - south) * 0.08], [west + (east - west) * 0.52, north - (north - south) * 0.08]] } },
-    { type: 'Feature', properties: { road_type: 'COLLECTOR', congestion_pct: 28 }, geometry: { type: 'LineString', coordinates: [[west + (east - west) * 0.26, south + (north - south) * 0.31], [east - (east - west) * 0.2, north - (north - south) * 0.26]] } },
-  ]
+
+  const allFeatures = [...keyFeatures, ...detailFeatures]
+
   return {
     type: 'SIM_INIT' as const,
     year: 0,
-    zones_geojson: { type: 'FeatureCollection' as const, features },
-    roads_geojson: { type: 'FeatureCollection' as const, features: roads },
+    zones_geojson: { type: 'FeatureCollection' as const, features: allFeatures },
+    roads_geojson: { type: 'FeatureCollection' as const, features: [] },
     metrics_snapshot: { year: 0, pop_total: city.population_current, pop_density_avg: 9000, pop_growth_rate: city.urban_growth_rate, mobility_commute: 42, mobility_congestion: 45, mobility_transit_coverage: 60, mobility_walkability: 58, econ_gdp_est: city.population_current * city.gdp_per_capita, econ_housing_afford: 54, econ_jobs_created: 0, env_green_ratio: 18, env_co2_est: 600, env_impervious: 52, env_flood_exposure: 18, equity_infra_gini: 34, equity_hosp_coverage: 71, equity_school_access: 78, infra_power_load: 61, infra_water_capacity: 68, safety_response_time: 7.5 },
     agent_actions: [],
   }
+}
+
+function populationForZone(zoneTypeId: string, city: any): number {
+  const base = city.population_current ?? 5000000
+  if (zoneTypeId.startsWith('HEALTH_')) return Math.round(base * 0.0003)
+  if (zoneTypeId.startsWith('EDU_')) return Math.round(base * 0.0002)
+  if (zoneTypeId.includes('STATION') || zoneTypeId.includes('AIRPORT')) return Math.round(base * 0.0001)
+  if (zoneTypeId.startsWith('COM_')) return Math.round(base * 0.00015)
+  if (zoneTypeId.startsWith('PARK_') || zoneTypeId.includes('FOREST') || zoneTypeId.includes('ENV_')) return 0
+  if (zoneTypeId.startsWith('RES_')) return Math.round(base * 0.00025)
+  return Math.round(base * 0.0001)
 }
 
 function isDevelopableCell(cityId: string, lng: number, lat: number, x: number, y: number, cols: number, rows: number) {
@@ -256,6 +345,39 @@ function isDevelopableCell(cityId: string, lng: number, lat: number, x: number, 
       inBox(lng, lat, -118.67, 34.12, -118.45, 34.34) ||
       inBox(lng, lat, -118.48, 33.8, -118.18, 33.97) ||
       inBox(lng, lat, -118.3, 33.73, -118.15, 33.82)
+    ) && jitter > 0.18
+  }
+  if (cityId === 'tokyo') {
+    return (
+      inBox(lng, lat, 139.55, 35.55, 139.85, 35.85) &&
+      !inBox(lng, lat, 139.62, 35.6, 139.78, 35.7) // exclude bay water
+    ) && jitter > 0.15
+  }
+  if (cityId === 'lagos') {
+    return (
+      inBox(lng, lat, 3.2, 6.4, 3.6, 6.65) &&
+      !inBox(lng, lat, 3.3, 6.43, 3.48, 6.52) // exclude lagoon
+    ) && jitter > 0.2
+  }
+  if (cityId === 'london') {
+    return inBox(lng, lat, -0.4, 51.35, 0.25, 51.65) && jitter > 0.16
+  }
+  if (cityId === 'sao_paulo') {
+    return inBox(lng, lat, -46.78, -23.72, -46.4, -23.42) && jitter > 0.17
+  }
+  if (cityId === 'singapore') {
+    return inBox(lng, lat, 103.62, 1.24, 104.02, 1.46) && jitter > 0.13
+  }
+  if (cityId === 'dubai') {
+    return (
+      inBox(lng, lat, 55.08, 24.82, 55.55, 25.32) &&
+      !inBox(lng, lat, 55.35, 25.18, 55.55, 25.35) // exclude desert fringe
+    ) && jitter > 0.2
+  }
+  if (cityId === 'mumbai') {
+    return (
+      inBox(lng, lat, 72.77, 18.92, 73.0, 19.26) &&
+      !inBox(lng, lat, 72.95, 19.05, 73.02, 19.15) // exclude bay
     ) && jitter > 0.18
   }
   const nx = (x + 0.5) / cols - 0.5
@@ -287,6 +409,5 @@ function zoneForCell(zones: string[], x: number, y: number, coreDistance: number
 
 function flashNewZones(map: maplibregl.Map, frame: any) {
   if (!frame.agent_actions?.length) return
-  // Map layer updates already animate visually via opacity; Phase 4 will add richer decision playback.
   map.triggerRepaint()
 }

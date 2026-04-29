@@ -1,3 +1,16 @@
+export interface Landmark {
+  name: string
+  lat: number
+  lng: number
+  zone_type_id: string
+  category: string
+  data_source: 'real' | 'estimated' | 'projected'
+  /** Override tile width in degrees. Defaults to category-based size. */
+  w_deg?: number
+  /** Override tile height in degrees. Defaults to w_deg * 0.75. */
+  h_deg?: number
+}
+
 export interface CityProfile {
   id: string
   name: string
@@ -12,6 +25,7 @@ export interface CityProfile {
   key_planning_challenge: string
   expansion_constraint?: string
   bbox: [number, number, number, number]
+  landmarks?: Landmark[]
   historical_snapshots?: Array<{
     year: number
     population: number
