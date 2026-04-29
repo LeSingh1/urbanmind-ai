@@ -44,20 +44,18 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   ...initialState,
 
   startSimulation: async (cityId, scenarioId, sandboxConfig) => {
-    const response = await fetch(`${API_BASE}/simulation/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ city_id: cityId, scenario_id: scenarioId, sandbox_config: sandboxConfig }),
-    })
-    if (!response.ok) throw new Error(`Simulation start failed: HTTP ${response.status}`)
-    const data = await response.json()
-    set({
-      ...initialState,
-      sessionId: data.session_id,
-      wsUrl: data.ws_url,
-      isRunning: true,
-      currentYear: 0,
-    })
+    try {
+      const response = await fetch(`${API_BASE}/simulation/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city_id: cityId, scenario_id: scenarioId, sandbox_config: sandboxConfig }),
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = await response.json()
+      set({ ...initialState, sessionId: data.session_id, wsUrl: data.ws_url, isRunning: true, currentYear: 0 })
+    } catch {
+      set({ ...initialState, sessionId: 'offline', isRunning: true, currentYear: 0 })
+    }
   },
 
   setSession: (sessionId, wsUrl) => set({ sessionId, wsUrl: wsUrl ?? `/ws/${sessionId}`, isRunning: true }),

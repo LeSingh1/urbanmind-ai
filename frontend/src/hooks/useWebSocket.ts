@@ -26,6 +26,11 @@ export function useWebSocket(sessionId: string | null) {
       setConnectionState('idle')
       return
     }
+    if (sessionId === 'offline') {
+      setIsConnected(true)
+      setConnectionState('connected')
+      return
+    }
 
     let shouldReconnect = true
 
